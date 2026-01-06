@@ -1,16 +1,32 @@
 import random
-# from debug_utils import get_instr_definition
+from dataclasses import dataclass
 
 class CPU():
     # ROMSTART = 0x200
 
-    # def __init__(self, state, switches, display, config={}):
-    #     self.config = {'debug':False}
-    #     self.config |= config # in-place update
-    #     self.state = state
-    #     self.switches = switches
-    #     self.display = display
-    #     self.config = config
+    def __init__(self, state, switches=None, display=None, config={}):
+        self.config = {'debug':False}
+        self.config |= config # in-place update
+        self.state = state
+        self.switches = switches
+        self.display = display
+
+
+    def run_cycle(self):
+        # 1. Fetch instruction opcode, and operands if needed
+        instruction_index = 0
+        instruction = OpcodeDetails()
+
+        while instruction_index < instruction.length:
+            op = self.state.get_byte_at_pc()
+            self.state.increment_pc()
+            self.state.set_ir(instruction_index, op)
+            if instruction_index == 0:
+                instruction = self.get_instruction(op)
+            instruction_index += 1
+
+        print(self.state)
+        print(instruction)
 
 
     # # instr will be a 1 byte opcode
@@ -76,19 +92,7 @@ class CPU():
     #     vf = display.update_screen(x, y, sprite)
     #     state.set_vx(0xf, vf)
 
-    def run_cycle(self):
-        # 1. Fetch instruction opcode, and operands if needed
-        instruction_length = 1
-        instruction_index = 0
-        while instruction_index < instruction_length:
-            op = self.state.get_byte_at_pc()
-            self.state.increment_pc()
-            self.state.set_ir(instruction_index, op)
-            if instruction_index == 0:
-                instruction_length = self.get_instruction_length(op)
-            instruction_index += 1
 
-        print(self.state)
 
         # # 4. Decode/Execute instruction
         # n1, n2, n3, n4, nn, nnn = self._decode_instruction(instr)
@@ -99,3 +103,13 @@ class CPU():
         # match n1:
 
 # clear IR
+
+@dataclass
+class OpcodeDetails:
+    length: int = 1
+    cycles: int = 1
+    instruction: str = 'Undefined'
+
+opcodes = {
+    0x00: OpcodeDetails(length=1, cycles=4, instruction='NOP')
+}
