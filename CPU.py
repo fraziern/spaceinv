@@ -1,5 +1,5 @@
 import random
-from dataclasses import dataclass
+from OpcodeDetails import OpcodeDetails
 
 class CPU():
     # ROMSTART = 0x200
@@ -12,14 +12,35 @@ class CPU():
         self.display = display
 
 
+    def _get_instruction(self, op):
+        try:
+            i =  opcodes[op]
+        except IndexError:
+            raise(f"Instruction {i:X} not defined.")
+        return i
+    
+
+    def _fetch_next_byte(self):
+        # get next byte that PC points to, then step the PC
+        value = self.state.get_byte_at_pc()
+        self.state.increment_pc()
+        return value
+
+
+    def _fetch_next_two_bytes(self):
+        # get next 2 bytes in ram, return them as little-endian 16 bit value
+        lsb = self._fetch_next_byte()
+        msb = self._fetch_next_byte() << 8
+        value = lsb | msb
+        return value
+
+
     def run_cycle(self):
-        # 1. Fetch instruction opcode, and operands if needed
-        instruction_index = 0
+        # 1. Fetch instruction opcode
         instruction = OpcodeDetails()
 
         while instruction_index < instruction.length:
-            op = self.state.get_byte_at_pc()
-            self.state.increment_pc()
+
             self.state.set_ir(instruction_index, op)
             if instruction_index == 0:
                 instruction = self.get_instruction(op)
@@ -104,12 +125,3 @@ class CPU():
 
 # clear IR
 
-@dataclass
-class OpcodeDetails:
-    length: int = 1
-    cycles: int = 1
-    instruction: str = 'Undefined'
-
-opcodes = {
-    0x00: OpcodeDetails(length=1, cycles=4, instruction='NOP')
-}

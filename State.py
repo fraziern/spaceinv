@@ -17,6 +17,7 @@ class State():
         self.registers = bytearray(7)
         self.pc = self.ROMSTART
         self.ram = bytearray(self.MEMORY_SIZE)
+        self.ir = bytearray(3)
 
     def __str__(self):
         string = ""
@@ -58,6 +59,13 @@ class State():
     
     def set_pc(self, value):
         self.pc = value % self.MEMORY_SIZE
+    
+    def set_ir(self, position, value):
+        if type(value) == bytes or type(value) == bytearray:
+            value = int.from_bytes(value)
+        if position > len(self.ir):
+            raise IndexError(f"Attempting to set Instruction Register at invalid index: {position}")
+        self.ir[position] = value
 
     # def get_ram(self,length=1,address=None):
     #     # TODO checks
