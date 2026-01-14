@@ -8,8 +8,9 @@ roms/
 archive/
 *.ipynb
 
-# C extensions
+# C and C# extensions
 *.so
+*.cs
 
 # Distribution / packaging
 .Python

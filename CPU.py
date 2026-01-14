@@ -68,52 +68,60 @@ class CPU():
         return value
 
 
-    def _run(self, instruction):
+    def _run(self, instruction:list):
         match instruction:
             # Machine control group
-            case [ 0, 0, 0, 0, 0, 0, 0, 0]:
-                instr_string = "NOP"
+            case [ 0, 0, 0, 0, 0, 0, 0, 0]: # instr_string = "NOP"
                 return 4
-            case [ 0, 1, 1, 1, 0, 1, 1, 0]:
-                instr_string = "HLT"
+            case [ 0, 1, 1, 1, 0, 1, 1, 0]: # instr_string = "HLT"
                 # TODO Halt flag
                 return 7
             # Data transfer group
-            case [ 0, 1, 1, 1, 0,s1,s2,s3]:
-                instr_string = "MOV M,r"
+            case [ 0, 0, 1, 1, 1, 0, 1, 0]: # instr_string = "LDA"
+                address = self._fetch_next_two_bytes()
+                self._mov(source_data=self.state.get_ram(address),
+                          dest_r='a')
+                return 13
+            case [ 0, 0, 1, 1, 0, 0, 1, 0]: # instr_string = "STA"
+                address = self._fetch_next_two_bytes()
+                self._mov(source_r='a', dest_addr=address)
+                return 13
+            case [ 0, 0, 1, 0, 1, 0, 1, 0]: # instr_string = "LHLD"
+                address = self._fetch_next_two_bytes()
+                self._mov(source_data=self.state.get_ram(address),   dest_r='l')
+                self._mov(source_data=self.state.get_ram(address+1), dest_r='h')
+            case [ 0, 1, 1, 1, 0,s1,s2,s3]: # instr_string = "MOV M,r"
                 self._mov(source_r=self._get_r_from_bits([s1,s2,s3]),
                           dest_addr_reg='hl')
                 return 7
-            case [ 0, 1,d1,d2,d3, 1, 1, 0]:
-                instr_string = "MOV r,M"
+            case [ 0, 1,d1,d2,d3, 1, 1, 0]: # instr_string = "MOV r,M"
                 self._mov(source_addr_reg='hl',
                           dest_r=self._get_r_from_bits([d1,d2,d3]))
                 return 7
-            case [ 0, 1,d1,d2,d3,s1,s2,s3]:
-                instr_string = "MOV r1,r2"
+            case [ 0, 1,d1,d2,d3,s1,s2,s3]: # instr_string = "MOV r1,r2"
                 self._mov(source_r=self._get_r_from_bits([s1,s2,s3]),
                           dest_r=self._get_r_from_bits([d1,d2,d3]))
                 return 5
-            case [ 0, 0, 1, 1, 0, 1, 1, 0]:
-                instr_string = "MVI M,data"
+            case [ 0, 0, 1, 1, 0, 1, 1, 0]: # instr_string = "MVI M,data"
+                data = self._fetch_next_byte()
                 self._mov(source_data=data,
                           dest_addr_reg='hl')
                 return 10
-            case [ 0, 0, r, p, 0, 0, 0, 1]:
-                instr_string = "LXI rp, data16"
+            case [ 0, 0, r, p, 0, 0, 0, 1]: # instr_string = "LXI rp, data16"
                 data = self._fetch_next_two_bytes()
                 self._mov(source_data=data,
                           dest_r=self._get_r_from_bits([r,p]))
-            case [ 0, 0,d1,d2,d3, 1, 1, 0]:
-                instr_string = "MVI r,data"
+            case [ 0, 0,d1,d2,d3, 1, 1, 0]: # instr_string = "MVI r,data"
                 data = self._fetch_next_byte()
                 self._mov(source_data=data,
                           dest_r=self._get_r_from_bits([d1,d2,d3]))
                 return 7
+            case _:
+                raise NotImplementedError()
             
     
-    def _mov(self, source_data=None, source_r=None, source_addr_reg=None, dest_r=None, 
-             dest_addr_reg=None):
+    def _mov(self, source_data=None, source_r=None, source_addr_reg=None, dest_addr=None,
+             dest_r=None, dest_addr_reg=None):
         if source_data:
             source = source_data
         elif source_r:
@@ -123,11 +131,14 @@ class CPU():
         else:
             raise ValueError("Source data not defined for move instruction.")
         
-        if dest_r:
+        if dest_addr:
+            self.state.set_ram(dest_addr, source)
+        elif dest_r:
             self.state.set_reg(dest_r, source)
         elif dest_addr_reg:
             self.state.set_ram(self.state.get_reg(dest_addr_reg), source)
-
+        else:
+            raise ValueError("Destination not defined for move instruction.")
 
 
     # def _add(self, state, a, b, result_to=None):
@@ -179,23 +190,14 @@ class CPU():
     #     state.set_vx(0xf, vf)
 
 
-
-        # # 4. Decode/Execute instruction
-        # n1, n2, n3, n4, nn, nnn = self._decode_instruction(instr)
-        # if self.config['debug']:
-        #     definition = get_instr_definition(n1, n2, n3, n4, nn, nnn)
-        #     print(f'Instruction {self.state.get_pc()-self.ROMSTART:X}: {instr.hex()} {definition}')
-
-        # match n1:
-
-# clear IR
-
     def run_cycle(self):
         # 1. Fetch instruction opcode
         op = self._fetch_next_byte()
         # 2. Decode, into list of bits
         instruction_bits = self._byte_to_bits(op)
-        used_cycles = self._run(instruction_bits)
-
+        try:
+            used_cycles = self._run(instruction_bits)
+        except NotImplementedError:
+            raise NotImplementedError(f"Instruction not implemented: {op:X}")
         print(self.state)
         print(instruction_bits)

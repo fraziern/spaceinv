@@ -85,7 +85,7 @@ class State():
         if address < len(self.ram):
             return self.ram[address]
         else:
-            raise IndexError("Attempting to read invalid RAM location: {address:4X}")
+            raise IndexError(f"Attempting to read invalid RAM location: {address:4X}")
 
 
     def set_ram(self, address, value):
