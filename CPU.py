@@ -1,5 +1,23 @@
 import random
-from OpcodeDetails import OpcodeDetails
+# from OpcodeDetails import opcodes
+# import opcodebytes
+
+register_codes = {
+    0b111: 'a',
+    0b000: 'b',
+    0b001: 'c',
+    0b010: 'd',
+    0b011: 'e',
+    0b100: 'h',
+    0b101: 'l',
+}
+
+register_codes_16b = {
+    0b00: 'bc',
+    0b01: 'de',
+    0b10: 'hl',
+    0b11: 'sp'
+}
 
 class CPU():
     # ROMSTART = 0x200
@@ -12,13 +30,28 @@ class CPU():
         self.display = display
 
 
-    def _get_instruction(self, op):
-        try:
-            i =  opcodes[op]
-        except IndexError:
-            raise(f"Instruction {i:X} not defined.")
-        return i
+    def _byte_to_bits(self, op):
+        # Not exactly a "decode" but used to get bits in opcode
+        # Format the integer to a binary string, padding with leading zeros to ensure correct length
+        binary_string = format(op, f'08b')
+
+        # Convert the binary string to a list of integers (bits)
+        list_of_bits = [int(bit) for bit in binary_string]
+
+        return list_of_bits
     
+
+    def _get_r_from_bits(self, bits):
+        binary_string = "".join(map(str, bits))
+        decimal_number = int(binary_string, 2)
+        if len(bits) == 2:
+            # rp
+            return register_codes_16b[decimal_number]
+        elif len(bits) == 3:
+            return register_codes[decimal_number]
+        else:
+            raise ValueError("Incorrect number of bits for conversion.")
+
 
     def _fetch_next_byte(self):
         # get next byte that PC points to, then step the PC
@@ -35,34 +68,66 @@ class CPU():
         return value
 
 
-    def run_cycle(self):
-        # 1. Fetch instruction opcode
-        instruction = OpcodeDetails()
-
-        while instruction_index < instruction.length:
-
-            self.state.set_ir(instruction_index, op)
-            if instruction_index == 0:
-                instruction = self.get_instruction(op)
-            instruction_index += 1
-
-        print(self.state)
-        print(instruction)
-
-
-    # # instr will be a 1 byte opcode
-    # # and optionally 1-2 data bytes
-    # def _decode_instruction(self, instr:bytearray):
+    def _run(self, instruction):
+        match instruction:
+            # Machine control group
+            case [ 0, 0, 0, 0, 0, 0, 0, 0]:
+                instr_string = "NOP"
+                return 4
+            case [ 0, 1, 1, 1, 0, 1, 1, 0]:
+                instr_string = "HLT"
+                # TODO Halt flag
+                return 7
+            # Data transfer group
+            case [ 0, 1, 1, 1, 0,s1,s2,s3]:
+                instr_string = "MOV M,r"
+                self._mov(source_r=self._get_r_from_bits([s1,s2,s3]),
+                          dest_addr_reg='hl')
+                return 7
+            case [ 0, 1,d1,d2,d3, 1, 1, 0]:
+                instr_string = "MOV r,M"
+                self._mov(source_addr_reg='hl',
+                          dest_r=self._get_r_from_bits([d1,d2,d3]))
+                return 7
+            case [ 0, 1,d1,d2,d3,s1,s2,s3]:
+                instr_string = "MOV r1,r2"
+                self._mov(source_r=self._get_r_from_bits([s1,s2,s3]),
+                          dest_r=self._get_r_from_bits([d1,d2,d3]))
+                return 5
+            case [ 0, 0, 1, 1, 0, 1, 1, 0]:
+                instr_string = "MVI M,data"
+                self._mov(source_data=data,
+                          dest_addr_reg='hl')
+                return 10
+            case [ 0, 0, r, p, 0, 0, 0, 1]:
+                instr_string = "LXI rp, data16"
+                data = self._fetch_next_two_bytes()
+                self._mov(source_data=data,
+                          dest_r=self._get_r_from_bits([r,p]))
+            case [ 0, 0,d1,d2,d3, 1, 1, 0]:
+                instr_string = "MVI r,data"
+                data = self._fetch_next_byte()
+                self._mov(source_data=data,
+                          dest_r=self._get_r_from_bits([d1,d2,d3]))
+                return 7
+            
+    
+    def _mov(self, source_data=None, source_r=None, source_addr_reg=None, dest_r=None, 
+             dest_addr_reg=None):
+        if source_data:
+            source = source_data
+        elif source_r:
+            source = self.state.get_reg(source_r)
+        elif source_addr_reg:
+            source = self.state.get_ram(self.state.get_reg(source_addr_reg))
+        else:
+            raise ValueError("Source data not defined for move instruction.")
         
-    #     # nibbles
-    #     n1 = (instr[0] >> 4) & 0xf
-    #     n2 = instr[0] & 0xf
-    #     n3 = (instr[1] >> 4) & 0xf
-    #     n4 = instr[1] & 0xf
-    #     nn = instr[1]
-    #     nnn = (n2 << 8) | (n3 << 4) | n4
+        if dest_r:
+            self.state.set_reg(dest_r, source)
+        elif dest_addr_reg:
+            self.state.set_ram(self.state.get_reg(dest_addr_reg), source)
 
-    #     return n1, n2, n3, n4, nn, nnn
 
 
     # def _add(self, state, a, b, result_to=None):
@@ -125,3 +190,12 @@ class CPU():
 
 # clear IR
 
+    def run_cycle(self):
+        # 1. Fetch instruction opcode
+        op = self._fetch_next_byte()
+        # 2. Decode, into list of bits
+        instruction_bits = self._byte_to_bits(op)
+        used_cycles = self._run(instruction_bits)
+
+        print(self.state)
+        print(instruction_bits)

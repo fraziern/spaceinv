@@ -11,13 +11,17 @@ reg_codes = {
 class State():
 
     ROMSTART = 0x0000
+    STACKSTART = 0x23FF
     MEMORY_SIZE = 16384
+
 
     def __init__(self):
         self.registers = bytearray(7)
         self.pc = self.ROMSTART
         self.ram = bytearray(self.MEMORY_SIZE)
+        self.sp = self.STACKSTART
         self.ir = bytearray(3)
+
 
     def __str__(self):
         string = ""
@@ -25,47 +29,71 @@ class State():
         string += f'Registers: {self.registers.hex(" ")}'
         return string
 
+
     def set_reg(self, reg_code, value):
         if type(value) == bytes or type(value) == bytearray:
             value = int.from_bytes(value)
         if reg_code in reg_codes:
             register = reg_codes[reg_code]
-            self.registers[register] = value % 256
+            self.registers[register] = value % 0xff
         elif reg_code in ['bc','de','hl']:
             register1, register2 = (reg_codes[reg_code[0]], reg_codes[reg_code[1]])
-            # TODO how does this work?
+            self.registers[register1] = (value >> 8) & 0xff
+            self.registers[register2] = value & 0xff
+        elif reg_code =='sp':
+            self.sp = value & 0xffff
         else:
             raise ValueError(f"Attempting to set non-existent register: {reg_code}")
         
+
     def get_reg(self, reg_code):
         if reg_code in reg_codes:
             register = reg_codes[reg_code]
             return self.registers[register]
         elif reg_code in ['bc','de','hl']:
             register1, register2 = (reg_codes[reg_code[0]], reg_codes[reg_code[1]])
-            # TODO how does this work?
+            return (self.registers[register1] << 8) | self.registers[register2]
+        elif reg_code == 'sp':
+            return self.sp
         else:
             raise ValueError(f"Attempting to read non-existent register: {reg_code}")
     
+
+    def get_sp(self):
+        # convenience method
+        return self.get_reg('sp')
+    
+    
     def increment_pc(self):
         self.pc = (self.pc + 1) % self.MEMORY_SIZE
-    
-    # convenience method
-    def get_byte_at_pc(self):
-        return self.ram[self.pc]
+
 
     def get_pc(self):
         return self.pc
     
+
     def set_pc(self, value):
         self.pc = value % self.MEMORY_SIZE
     
-    def set_ir(self, position, value):
-        if type(value) == bytes or type(value) == bytearray:
-            value = int.from_bytes(value)
-        if position > len(self.ir):
-            raise IndexError(f"Attempting to set Instruction Register at invalid index: {position}")
-        self.ir[position] = value
+    
+    # convenience method
+    def get_byte_at_pc(self):
+        return self.get_ram(self.pc)
+    
+
+    def get_ram(self, address):
+        if address < len(self.ram):
+            return self.ram[address]
+        else:
+            raise IndexError("Attempting to read invalid RAM location: {address:4X}")
+
+
+    def set_ram(self, address, value):
+        if address < len(self.ram):
+            self.ram[address] = value % 256
+        else:
+            raise IndexError("Attempting to write to invalid RAM location: {address:4X}")
+
 
     # def get_ram(self,length=1,address=None):
     #     # TODO checks
