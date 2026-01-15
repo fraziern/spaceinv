@@ -76,6 +76,7 @@ class CPU():
             case [ 0, 1, 1, 1, 0, 1, 1, 0]: # instr_string = "HLT"
                 # TODO Halt flag
                 return 7
+            
             # Data transfer group
             case [ 0, 0, 1, 1, 1, 0, 1, 0]: # instr_string = "LDA"
                 address = self._fetch_next_two_bytes()
@@ -90,6 +91,12 @@ class CPU():
                 address = self._fetch_next_two_bytes()
                 self._mov(source_data=self.state.get_ram(address),   dest_r='l')
                 self._mov(source_data=self.state.get_ram(address+1), dest_r='h')
+                return 16
+            case [ 0, 0, 1, 0, 0, 0, 1, 0]: # instr_string = "SHLD"
+                address = self._fetch_next_two_bytes()
+                self._mov(source_r='l', dest_addr=address)
+                self._mov(source_r='h', dest_addr=address+1)
+                return 16
             case [ 0, 1, 1, 1, 0,s1,s2,s3]: # instr_string = "MOV M,r"
                 self._mov(source_r=self._get_r_from_bits([s1,s2,s3]),
                           dest_addr_reg='hl')
@@ -107,15 +114,36 @@ class CPU():
                 self._mov(source_data=data,
                           dest_addr_reg='hl')
                 return 10
+            case [ 1, 1, 1, 0, 1, 0, 1, 1]: # instr_string = "XCHG"
+                temp = self.state.get_reg('de')
+                self._mov(source_r='hl', dest_r='de')
+                self._mov(source_data=temp, dest_r='hl')
+                return 4
             case [ 0, 0, r, p, 0, 0, 0, 1]: # instr_string = "LXI rp, data16"
                 data = self._fetch_next_two_bytes()
                 self._mov(source_data=data,
                           dest_r=self._get_r_from_bits([r,p]))
+                return 10
+            case [ 0, 0, r, p, 1, 0, 1, 0]: # instr_string = "LDAX rp"
+                if r == 1:
+                    raise ValueError("LDAX can only use register pairs BC and DE.")
+                self._mov(source_addr_reg=self._get_r_from_bits([r,p]),
+                          dest_r='a')
+                return 7
+            case [ 0, 0, r, p, 0, 0, 1, 0]: # instr_string = "STAX rp"
+                if r == 1:
+                    raise ValueError("STAX can only use register pairs BC and DE.")
+                self._mov(source_r='a', 
+                          dest_addr=self.state.get_reg(self._get_r_from_bits([r,p])))
+                return 7          
             case [ 0, 0,d1,d2,d3, 1, 1, 0]: # instr_string = "MVI r,data"
                 data = self._fetch_next_byte()
                 self._mov(source_data=data,
                           dest_r=self._get_r_from_bits([d1,d2,d3]))
                 return 7
+            
+            # Arithmetic group
+
             case _:
                 raise NotImplementedError()
             
@@ -140,6 +168,29 @@ class CPU():
         else:
             raise ValueError("Destination not defined for move instruction.")
 
+    def _add(self, source_data=None, source_r=None, dest_addr=None):
+        acc_value = self.state.get_reg('a')
+        if source_r:
+            source = self.state.get_reg(source_r)
+        
+        result = source + acc_value
+        if dest_addr:
+            # send result to dest
+            pass
+        else:
+            self.state.set_reg('a', result % 256)
+        # condition flag checks
+        flags = [
+            bool(result >> 7), # s
+            bool(not result),  # z
+            False,
+            ((source & 0xf + acc_value & 0xf) > 0xf), # ac
+            False,
+            not bool(sum(self._byte_to_bits(result)) % 2), # p
+            False,
+            (result >= 256) # c
+        ]
+        self.state.set_flags(flags)
 
     # def _add(self, state, a, b, result_to=None):
     #     if result_to is None:

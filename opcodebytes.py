@@ -94,3 +94,27 @@ STA     = 0x32
 
 #   load H and L direct
 LHLD    = 0x2a
+
+#   store H and L direct
+SHLD    = 0x22
+
+#   Load accumulator
+LDAX_B  = 0x0a
+LDAX_D  = 0x1a
+
+#   Store accumulator
+STAX_B  = 0x02
+STAX_D  = 0x12
+
+#   exchange registers
+XCHG    = 0xeb
+
+#   add register/memory to accumulator
+ADD_B   = 0x80
+ADD_C   = 0x81
+ADD_D   = 0x82
+ADD_E   = 0x83
+ADD_H   = 0x84
+ADD_L   = 0x85
+ADD_M   = 0x86
+ADD_A   = 0x87
