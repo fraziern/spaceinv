@@ -8,6 +8,10 @@ def test_set_ram_bad_location(state):
     with pytest.raises(IndexError):
         state.set_ram(0xffff, 0xff)
 
+def test_set_reg(state):
+    state.set_reg('c', 0xff)
+    assert state.get_reg('c') == 0xff
+
 # instruction tests
 def test_nop(cpu, state):
     state.ram[0] = opcodebytes.NOP
@@ -103,7 +107,7 @@ def test_xchg(cpu, state):
     assert state.get_reg('de') == 0x2339
 
 # arithmetic
-def test_add(cpu, state):
+def test_add_d(cpu, state):
     state.set_reg('d', 0xd3)
     state.set_reg('a', 0x01)
     state.ram[0] = opcodebytes.ADD_D
@@ -115,15 +119,122 @@ def test_add(cpu, state):
     assert state.get_flag('s') == True
 
 def test_add_carry(cpu, state):
-    pass
+    state.set_reg('c', 0xff)
+    state.set_reg('a', 0x01)
+    state.ram[0] = opcodebytes.ADD_C
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0x00
+    # check parity
+    assert state.get_flag('p') == True
+    # check carry
+    assert state.get_flag('c') == True
 
 def test_add_aux_carry(cpu, state):
-    pass
+    state.set_reg('d', 0x0f)
+    state.set_reg('a', 0x01)
+    state.ram[0] = opcodebytes.ADD_D
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0x10
+    # check aux carry
+    assert state.get_flag('ac') == True
 
 def test_add_zero(cpu, state):
+    state.set_reg('c', 0xff)
+    state.set_reg('a', 0x01)
+    state.ram[0] = opcodebytes.ADD_C
+    cpu.run_cycle()
+    assert state.get_flag('z') == True
     # check parity too
+    assert state.get_flag('p') == True
     # check sign
-    pass
+    assert state.get_flag('s') == False
+
+def test_add_m(cpu, state):
+    state.set_reg('hl', 0x2225)
+    state.set_reg('a', 0xff)
+    state.ram[0] = opcodebytes.ADD_M
+    state.ram[0x2225] = 0x02
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0x01
+    assert state.get_flag('c') == True
+
+def test_adi(cpu, state):
+    state.ram[0:2] = [opcodebytes.ADI, 0x56]
+    state.set_reg('a', 0x50)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0xa6
+
+def test_adc_c(cpu, state):
+    state.set_flag('c', True)
+    state.set_reg('c', 0x40)
+    state.set_reg('a', 0x05)
+    state.ram[0] = opcodebytes.ADC_C
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0x46
+
+def test_adc_m(cpu, state):
+    state.set_flag('c', False)
+    state.set_reg('hl', 0x2225)
+    state.set_reg('a', 0xff)
+    state.ram[0] = opcodebytes.ADC_M
+    state.ram[0x2225] = 0x02
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0x01
+    assert state.get_flag('c') == True
+
+def test_aci(cpu, state):
+    state.ram[0:2] = [opcodebytes.ACI, 0x56]
+    state.set_reg('a', 0x50)
+    state.set_flag('c', True)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0xa7
+
+def test_sub_b_with_borrow(cpu, state):
+    state.ram[0] = opcodebytes.SUB_B
+    state.set_reg('a', 0x50)
+    state.set_reg('b', 0x55)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0b11111011 # 2s complement = -5
+    assert state.get_flag('c') == True
+
+def test_sub_a(cpu, state):
+    state.ram[0] = opcodebytes.SUB_A
+    state.set_reg('a', 0x50)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0
+    assert state.get_flag('c') == False
+    assert state.get_flag('z') == True
+    assert state.get_flag('p') == True
+
+def test_sub_m(cpu, state):
+    state.set_reg('hl', 0x2225)
+    state.set_reg('a', 0xff)
+    state.ram[0] = opcodebytes.SUB_M
+    state.ram[0x2225] = 0x02
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0xfd
+    assert state.get_flag('c') == False
+
+def test_sbb_d(cpu, state):
+    state.ram[0] = opcodebytes.SBB_D
+    state.set_reg('a', 0x50)
+    state.set_reg('d', 0xff)
+    state.set_flag('c', True)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 80 # 2s commplement low 8 bits of -176
+    assert state.get_flag('c') == True
+    assert state.get_flag('z') == False
+    assert state.get_flag('p') == True
+
+def test_sbb_m(cpu, state):
+    state.set_flag('c', True)
+    state.set_reg('hl', 0x2225)
+    state.set_reg('a', 0xff)
+    state.ram[0] = opcodebytes.SBB_M
+    state.ram[0x2225] = 0x02
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0xfc
+    assert state.get_flag('c') == False
 
 @pytest.fixture
 def state():

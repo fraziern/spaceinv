@@ -118,3 +118,39 @@ ADD_H   = 0x84
 ADD_L   = 0x85
 ADD_M   = 0x86
 ADD_A   = 0x87
+
+#   add immediate to acc
+ADI = 0xc6
+
+#   add immediate to acc with carry
+ACI = 0xce
+
+#   add register or memory to acc with carry
+ADC_B = 0x88
+ADC_C = 0x89
+ADC_D = 0x8a
+ADC_E = 0x8b
+ADC_H = 0x8c
+ADC_L = 0x8d
+ADC_M = 0x8e
+ADC_A = 0x8f
+
+# subtract memory or register from acc
+SUB_B = 0x90
+SUB_C = 0x91
+SUB_D = 0x92
+SUB_E = 0x93
+SUB_H = 0x94
+SUB_L = 0x95
+SUB_M = 0x96
+SUB_A = 0x97
+
+# subtract with borrow
+SBB_B = 0x98
+SBB_C = 0x99
+SBB_D = 0x9a
+SBB_E = 0x9b
+SBB_H = 0x9c
+SBB_L = 0x9d
+SBB_M = 0x9e
+SBB_A = 0x9f

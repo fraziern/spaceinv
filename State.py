@@ -57,7 +57,7 @@ class State():
             value = int.from_bytes(value)
         if reg_code in reg_indices:
             register = reg_indices[reg_code]
-            self.registers[register] = value % 0xff
+            self.registers[register] = value % 256
         elif reg_code in ['bc','de','hl']:
             register1, register2 = (reg_indices[reg_code[0]], reg_indices[reg_code[1]])
             self.registers[register1] = (value >> 8) & 0xff

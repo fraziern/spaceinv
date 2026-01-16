@@ -1,4 +1,4 @@
-import random
+from State import State
 # from OpcodeDetails import opcodes
 # import opcodebytes
 
@@ -22,7 +22,7 @@ register_codes_16b = {
 class CPU():
     # ROMSTART = 0x200
 
-    def __init__(self, state, switches=None, display=None, config={}):
+    def __init__(self, state:State, switches=None, display=None, config={}):
         self.config = {'debug':False}
         self.config |= config # in-place update
         self.state = state
@@ -143,7 +143,42 @@ class CPU():
                 return 7
             
             # Arithmetic group
-
+            case [ 1, 0, 0, 0, 0, 1, 1, 0]: # instr_string = "ADD m"
+                data = self.state.get_ram(self.state.get_reg('hl'))
+                self._add(source_data=data)
+                return 7
+            case [ 1, 0, 0, 0, 0,s1,s2,s3]: # instr_string = "ADD r"
+                source_reg = self._get_r_from_bits([s1,s2,s3])
+                self._add(source_r=source_reg)
+                return 4
+            case [ 1, 1, 0, 0, 0, 1, 1, 0]: # instr_string = "ADI data"
+                data = self._fetch_next_byte()
+                self._add(source_data=data)
+                return 7
+            case [ 1, 1, 0, 0, 1, 1, 1, 0]: # instr_string = "ACI data"
+                data = self._fetch_next_byte()
+                self._add(source_data=data, add_carry=True)
+                return 7
+            case [ 1, 0, 0, 0, 1, 1, 1, 0]: # instr_string = "ADC m"
+                data = self.state.get_ram(self.state.get_reg('hl'))
+                self._add(source_data=data, add_carry=True)
+                return 7
+            case [ 1, 0, 0, 0, 1,s1,s2,s3]: # instr_string = "ADC r"
+                source_reg = self._get_r_from_bits([s1,s2,s3])
+                self._add(source_r=source_reg, add_carry=True)
+                return 4
+            case [ 1, 0, 0, 1, 0, 1, 1, 0]: # instr_string = "SUB m"
+                pass
+            case [ 1, 0, 0, 1, 0,s1,s2,s3]: # instr_string = "SUB r"
+                source_reg = self._get_r_from_bits([s1,s2,s3])
+                self._sub(source_r=source_reg)
+                return 4
+            case [ 1, 0, 0, 1, 1, 1, 1, 0]: # instr_string = "SBB m"
+                pass
+            case [ 1, 0, 0, 1, 1,s1,s2,s3]: # instr_string = "SBB r"
+                source_reg = self._get_r_from_bits([s1,s2,s3])
+                self._sub(source_r=source_reg, sub_carry=True)
+                return 4
             case _:
                 raise NotImplementedError()
             
@@ -168,47 +203,58 @@ class CPU():
         else:
             raise ValueError("Destination not defined for move instruction.")
 
-    def _add(self, source_data=None, source_r=None, dest_addr=None):
+    def _add(self, source_data=None, source_r=None, add_carry=False):
         acc_value = self.state.get_reg('a')
         if source_r:
             source = self.state.get_reg(source_r)
+        elif source_data:
+            source = source_data
         
+        # add carry bit if add_carry is True
+        source = source + self.state.get_flag('c') if add_carry else source
         result = source + acc_value
-        if dest_addr:
-            # send result to dest
-            pass
-        else:
-            self.state.set_reg('a', result % 256)
+        byte_result = result % 256
+        self.state.set_reg('a', byte_result)
         # condition flag checks
         flags = [
-            bool(result >> 7), # s
-            bool(not result),  # z
+            bool(byte_result >> 7), # s
+            bool(not byte_result),  # z
             False,
-            ((source & 0xf + acc_value & 0xf) > 0xf), # ac
+            ((source & 0xf) + (acc_value & 0xf) > 0xf), # ac
             False,
-            not bool(sum(self._byte_to_bits(result)) % 2), # p
+            not bool(sum(self._byte_to_bits(byte_result)) % 2), # p
             False,
             (result >= 256) # c
         ]
         self.state.set_flags(flags)
 
-    # def _add(self, state, a, b, result_to=None):
-    #     if result_to is None:
-    #         result_to = a
-    #     value = state.get_vx(a) + state.get_vx(b)
-    #     value, vf = (value % 256, 1) if value > 255 else (value, 0)
-    #     state.set_vx(result_to,value)
-    #     state.set_vx(0xf,vf) # carry
+    def _sub(self, source_data=None, source_r=None, sub_carry=False):
+        acc_value = self.state.get_reg('a')
+        if source_r:
+            source = self.state.get_reg(source_r)
+        elif source_data:
+            source = source_data
+        
+        # sub carry bit if sub_carry is True
+        source = source + self.state.get_flag('c') if sub_carry else source
+        result = acc_value - source
+        byte_result = result & 0xff
+
+        self.state.set_reg('a', byte_result)
+        # condition flag checks
+        flags = [
+            bool(byte_result >> 7), # s
+            bool(not byte_result),  # z
+            False,
+            ((~source & 0xf) + (acc_value & 0xf) > 0xf), # ac
+            False,
+            not bool(sum(self._byte_to_bits(byte_result)) % 2), # p
+            False,
+            (source > acc_value) # c
+        ]
+        self.state.set_flags(flags)
 
 
-    # def _subtract(self, state, a, b, result_to=None): 
-    #     # function for 8xy5 and 8xy7, subtracts a - b and updates state
-    #     if result_to is None:
-    #         result_to = a
-    #     value = state.get_vx(a) - state.get_vx(b)
-    #     value, vf = ((value + 256) % 256, 0) if value < 0 else (value, 1)
-    #     state.set_vx(result_to,value)
-    #     state.set_vx(0xf, vf)
 
 
     # def _right_shift(self, state, a, b, result_to=None):
