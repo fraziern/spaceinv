@@ -236,6 +236,38 @@ def test_sbb_m(cpu, state):
     assert state.get_reg('a') == 0xfc
     assert state.get_flag('c') == False
 
+def test_sui(cpu, state):
+    state.ram[0:2] = [opcodebytes.SUI, 0x6d]
+    state.set_reg('a', 0x80)
+    cpu.run_cycle()
+    assert state.get_reg('a') == (0x80 - 0x6d)
+
+def test_sbi(cpu, state):
+    state.ram[0:2] = [opcodebytes.SBI, 0x6d]
+    state.set_reg('a', 0x80)
+    state.set_flag('c', True)
+    cpu.run_cycle()
+    assert state.get_reg('a') == (0x80 - 0x6d - 1)
+
+def test_inr_h(cpu, state):
+    state.ram[0] = opcodebytes.INR_H
+    state.set_reg('h', 0xff)
+    state.set_flag('c', False)
+    cpu.run_cycle()
+    assert state.get_reg('h') == 0
+    assert state.get_flag('c') == False
+    assert state.get_flag('z') == True
+
+def test_inr_m(cpu, state):
+    state.ram[0] = opcodebytes.INR_M
+    state.ram[0x478] = 0x56
+    state.set_reg('hl') = 0x478
+    cpu.run_cycle()
+    assert state.get_ram(0x478) == 0x57
+    assert state.get_flag('p') == True
+
+
+
 @pytest.fixture
 def state():
     return State()

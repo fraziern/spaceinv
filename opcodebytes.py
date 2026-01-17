@@ -119,11 +119,9 @@ ADD_L   = 0x85
 ADD_M   = 0x86
 ADD_A   = 0x87
 
-#   add immediate to acc
-ADI = 0xc6
-
-#   add immediate to acc with carry
+#   add immediate to acc with/without carry
 ACI = 0xce
+ADI = 0xc6
 
 #   add register or memory to acc with carry
 ADC_B = 0x88
@@ -154,3 +152,17 @@ SBB_H = 0x9c
 SBB_L = 0x9d
 SBB_M = 0x9e
 SBB_A = 0x9f
+
+# subtract immediate with/without borrow
+SBI   = 0xde
+SUI   = 0xd6
+
+# increment register or memory
+INR_B = 0x04
+INR_C = 0x0c
+INR_D = 0x14
+INR_E = 0x1c
+INR_H = 0x24
+INR_L = 0x2c
+INR_M = 0x34
+INR_A = 0x3c

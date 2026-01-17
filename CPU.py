@@ -1,6 +1,4 @@
 from State import State
-# from OpcodeDetails import opcodes
-# import opcodebytes
 
 register_codes = {
     0b111: 'a',
@@ -20,7 +18,6 @@ register_codes_16b = {
 }
 
 class CPU():
-    # ROMSTART = 0x200
 
     def __init__(self, state:State, switches=None, display=None, config={}):
         self.config = {'debug':False}
@@ -168,17 +165,35 @@ class CPU():
                 self._add(source_r=source_reg, add_carry=True)
                 return 4
             case [ 1, 0, 0, 1, 0, 1, 1, 0]: # instr_string = "SUB m"
-                pass
+                data = self.state.get_ram(self.state.get_reg('hl'))
+                self._sub(source_data=data)
+                return 7
             case [ 1, 0, 0, 1, 0,s1,s2,s3]: # instr_string = "SUB r"
                 source_reg = self._get_r_from_bits([s1,s2,s3])
                 self._sub(source_r=source_reg)
                 return 4
             case [ 1, 0, 0, 1, 1, 1, 1, 0]: # instr_string = "SBB m"
-                pass
+                data = self.state.get_ram(self.state.get_reg('hl'))
+                self._sub(source_data=data, sub_carry=True)
+                return 7
             case [ 1, 0, 0, 1, 1,s1,s2,s3]: # instr_string = "SBB r"
                 source_reg = self._get_r_from_bits([s1,s2,s3])
                 self._sub(source_r=source_reg, sub_carry=True)
                 return 4
+            case [ 1, 1, 0, 1, 0, 1, 1, 0]: # instr_string = "SUI data"
+                data = self._fetch_next_byte()
+                self._sub(source_data=data)
+                return 7
+            case [ 1, 1, 0, 1, 1, 1, 1, 0]: # instr_string = "SBI data"
+                data = self._fetch_next_byte()
+                self._sub(source_data=data, sub_carry=True)
+                return 7
+            case [ 0, 0, 1, 1, 0, 1, 0, 0]: # instr_string = "INR M"
+                self._inc(use_hl_address=True)
+                return 10
+            case [ 0, 0,d1,d2,d3, 1, 0, 0]: # instr_string = "INR r"
+                self._inc(register=self._get_r_from_bits([d1,d2,d3]))
+                return 5
             case _:
                 raise NotImplementedError()
             
@@ -228,6 +243,28 @@ class CPU():
         ]
         self.state.set_flags(flags)
 
+    def _inc(self, register=None, use_hl_address=False):
+        if register:
+            initial_value = self.state.get_reg(register)
+            byte_result = (initial_value + 1) % 256
+            self.state.set_reg(register, byte_result)
+        elif use_hl_address:
+            address = self.state.get_reg('hl')
+            initial_value = self.state.get_ram(address)
+            byte_result = (initial_value + 1) % 256
+            self.state.set_ram(address, byte_result)
+        flags = [
+            bool(byte_result >> 7), # s
+            bool(not byte_result),  # z
+            False,
+            ((initial_value & 0xf) + 1 > 0xf), # ac
+            False,
+            not bool(sum(self._byte_to_bits(byte_result)) % 2), # p
+            False,
+            self.state.get_flag('c') # don't touch c here
+        ]
+        self.state.set_flags(flags)
+
     def _sub(self, source_data=None, source_r=None, sub_carry=False):
         acc_value = self.state.get_reg('a')
         if source_r:
@@ -254,37 +291,6 @@ class CPU():
         ]
         self.state.set_flags(flags)
 
-
-
-
-    # def _right_shift(self, state, a, b, result_to=None):
-    #     # 8xy6
-    #     if result_to is None:
-    #         result_to = a
-    #     if self.config['nineties_shift']:
-    #         state.set_vx(a, state.get_vx(b))
-    #     vf = state.get_vx(a) & 0x1 # grab the rightmost bit
-    #     state.set_vx(a, state.get_vx(a) >> 1)
-    #     state.set_vx(0xf, vf)
-
-
-    # def _left_shift(self, state, a, b, result_to=None):
-    #     # 8xye
-    #     if result_to is None:
-    #         result_to = a
-    #     if self.config['nineties_shift']:
-    #         state.set_vx(a, state.get_vx(b))
-    #     vf = (state.get_vx(a) >> 7) & 0x1 # grab the leftmost bit
-    #     state.set_vx(a, state.get_vx(a) << 1)
-    #     state.set_vx(0xf, vf)
-
-
-    # def _draw_instr(self, state, display, vx, vy, n):
-    #     x = state.get_vx(vx)
-    #     y = state.get_vx(vy)
-    #     sprite = state.get_ram(n)
-    #     vf = display.update_screen(x, y, sprite)
-    #     state.set_vx(0xf, vf)
 
 
     def run_cycle(self):
