@@ -261,11 +261,42 @@ def test_inr_h(cpu, state):
 def test_inr_m(cpu, state):
     state.ram[0] = opcodebytes.INR_M
     state.ram[0x478] = 0x56
-    state.set_reg('hl') = 0x478
+    state.set_reg('hl', 0x478)
     cpu.run_cycle()
     assert state.get_ram(0x478) == 0x57
-    assert state.get_flag('p') == True
+    assert state.get_flag('p') == False # odd
 
+def test_dcr_c(cpu, state):
+    state.ram[0] = opcodebytes.DCR_C
+    state.set_reg('c', 0xff)
+    cpu.run_cycle()
+    assert state.get_reg('c') == 0xfe
+
+def test_dcr_b(cpu, state):
+    state.ram[0] = opcodebytes.DCR_B
+    state.set_reg('b', 0x00)
+    cpu.run_cycle()
+    assert state.get_reg('b') == 0xff
+
+def test_inx_b(cpu, state):
+    state.ram[0] = opcodebytes.INX_B
+    state.set_reg('bc', 0x4545)
+    cpu.run_cycle()
+    assert state.get_reg('bc') == 0x4546
+
+def test_dcx_sp(cpu, state):
+    state.ram[0] = opcodebytes.DCX_SP
+    state.set_reg('sp', 0x0001)
+    cpu.run_cycle()
+    assert state.get_reg('sp') == 0x0000
+
+def test_dad_b(cpu, state):
+    state.ram[0] = opcodebytes.DAD_B
+    state.set_reg('bc', 0xffff)
+    state.set_reg('hl', 0x0010)
+    cpu.run_cycle()
+    assert state.get_reg('hl') == 0x000f
+    assert state.get_flag('c') == True
 
 
 @pytest.fixture

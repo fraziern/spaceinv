@@ -194,6 +194,23 @@ class CPU():
             case [ 0, 0,d1,d2,d3, 1, 0, 0]: # instr_string = "INR r"
                 self._inc(register=self._get_r_from_bits([d1,d2,d3]))
                 return 5
+            case [ 0, 0, 1, 1, 0, 1, 0, 1]: # instr_string = "DCR M"
+                self._dec(use_hl_address=True)
+                return 10
+            case [ 0, 0,d1,d2,d3, 1, 0, 1]: # instr_string = "DCR r"
+                self._dec(register=self._get_r_from_bits([d1,d2,d3]))
+                return 5
+            case [ 0, 0, r, p, 0, 0, 1, 1]: # instr_string = "INX rp"
+                register = self._get_r_from_bits([r,p])
+                self.state.set_reg(register, self.state.get_reg(register) + 1)
+                return 5
+            case [ 0, 0, r, p, 1, 0, 1, 1]: # instr_string = "DCX rp"
+                register = self._get_r_from_bits([r,p])
+                self.state.set_reg(register, self.state.get_reg(register) - 1)
+                return 5
+            case [ 0, 0, r, p, 1, 0, 0, 1]: # instr_string = "DAD rp"
+                self._dad(self._get_r_from_bits([r,p]))
+                return 10
             case _:
                 raise NotImplementedError()
             
@@ -206,8 +223,6 @@ class CPU():
             source = self.state.get_reg(source_r)
         elif source_addr_reg:
             source = self.state.get_ram(self.state.get_reg(source_addr_reg))
-        else:
-            raise ValueError("Source data not defined for move instruction.")
         
         if dest_addr:
             self.state.set_ram(dest_addr, source)
@@ -218,7 +233,7 @@ class CPU():
         else:
             raise ValueError("Destination not defined for move instruction.")
 
-    def _add(self, source_data=None, source_r=None, add_carry=False):
+    def _add(self, source_data=None, source_r=None, add_carry=False, use_negative=False):
         acc_value = self.state.get_reg('a')
         if source_r:
             source = self.state.get_reg(source_r)
@@ -227,8 +242,11 @@ class CPU():
         
         # add carry bit if add_carry is True
         source = source + self.state.get_flag('c') if add_carry else source
-        result = source + acc_value
-        byte_result = result % 256
+
+        # negate if this is a subtract operation
+        source = -source if use_negative else source
+        
+        byte_result = (source + acc_value) & 0xff
         self.state.set_reg('a', byte_result)
         # condition flag checks
         flags = [
@@ -239,25 +257,27 @@ class CPU():
             False,
             not bool(sum(self._byte_to_bits(byte_result)) % 2), # p
             False,
-            (result >= 256) # c
+            ((-source > acc_value) if use_negative else 
+             (source + acc_value >= 0xff)) # c
         ]
         self.state.set_flags(flags)
 
-    def _inc(self, register=None, use_hl_address=False):
+    def _inc(self, register=None, use_hl_address=False, negative=False):
+        inc_by = -1 if negative else 1
         if register:
             initial_value = self.state.get_reg(register)
-            byte_result = (initial_value + 1) % 256
+            byte_result = (initial_value + inc_by) % 256
             self.state.set_reg(register, byte_result)
         elif use_hl_address:
             address = self.state.get_reg('hl')
             initial_value = self.state.get_ram(address)
-            byte_result = (initial_value + 1) % 256
+            byte_result = (initial_value + inc_by) & 0xff
             self.state.set_ram(address, byte_result)
         flags = [
             bool(byte_result >> 7), # s
             bool(not byte_result),  # z
             False,
-            ((initial_value & 0xf) + 1 > 0xf), # ac
+            ((initial_value & 0xf) + inc_by > 0xf), # ac
             False,
             not bool(sum(self._byte_to_bits(byte_result)) % 2), # p
             False,
@@ -266,31 +286,17 @@ class CPU():
         self.state.set_flags(flags)
 
     def _sub(self, source_data=None, source_r=None, sub_carry=False):
-        acc_value = self.state.get_reg('a')
-        if source_r:
-            source = self.state.get_reg(source_r)
-        elif source_data:
-            source = source_data
-        
-        # sub carry bit if sub_carry is True
-        source = source + self.state.get_flag('c') if sub_carry else source
-        result = acc_value - source
-        byte_result = result & 0xff
+        self._add(source_data, source_r, add_carry=sub_carry, use_negative=True)
 
-        self.state.set_reg('a', byte_result)
-        # condition flag checks
-        flags = [
-            bool(byte_result >> 7), # s
-            bool(not byte_result),  # z
-            False,
-            ((~source & 0xf) + (acc_value & 0xf) > 0xf), # ac
-            False,
-            not bool(sum(self._byte_to_bits(byte_result)) % 2), # p
-            False,
-            (source > acc_value) # c
-        ]
-        self.state.set_flags(flags)
+    def _dec(self, register=None, use_hl_address=False):
+        self._inc(register, use_hl_address, negative=True)
 
+    def _dad(self, register):
+        # add register pair to hl, set carry flag if needed
+        hl_value = self.state.get_reg('hl')
+        result = self.state.get_reg(register) + hl_value
+        self.state.set_reg('hl', result & 0xffff)
+        self.state.set_flag('c', result > 0xffff)
 
 
     def run_cycle(self):
