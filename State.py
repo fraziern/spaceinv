@@ -8,15 +8,6 @@ reg_indices = {
     'a':6,
     }
 
-flag_indices = {
-    's': 0,
-    'z': 1,
-    'a': 3,
-    'ac':3,
-    'p': 5,
-    'c': 7,
-}
-
 class State():
 
     ROMSTART = 0x0000
@@ -29,7 +20,7 @@ class State():
         self.pc = self.ROMSTART
         self.ram = bytearray(self.MEMORY_SIZE)
         self.sp = self.STACKSTART
-        self.flags = [False] * 8 # using bools to enforce 1/0 somewhat
+        self.flags = {f:False for f in 'szaapc'}
 
     def __str__(self):
         string = ""
@@ -42,14 +33,14 @@ class State():
 
 
     def get_flag(self, flag:str) -> bool:
-        return self.flags[flag_indices[flag]]
+        return self.flags[flag]
     
     def set_flag(self, flag:str, value:bool):
-        self.flags[flag_indices[flag]] = value
+        self.flags[flag] = value
     
-    def set_flags(self, value:list[bool]):
+    def set_flags(self, values:dict[str, bool]):
         # set all the flags at once
-        self.flags = value
+        self.flags |= values
         
 
     def set_reg(self, reg_code, value):
@@ -98,7 +89,9 @@ class State():
         return self.get_ram(self.pc)
     
 
-    def get_ram(self, address):
+    def get_ram(self, address_or_reg):
+        address = self.get_reg(address_or_reg) if isinstance(address_or_reg, 
+                                                             str) else address_or_reg
         return self.ram[address]
 
     def set_ram(self, address, value):

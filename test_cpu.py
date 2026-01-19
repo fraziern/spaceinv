@@ -136,7 +136,7 @@ def test_add_aux_carry(cpu, state):
     cpu.run_cycle()
     assert state.get_reg('a') == 0x10
     # check aux carry
-    assert state.get_flag('ac') == True
+    assert state.get_flag('a') == True
 
 def test_add_zero(cpu, state):
     state.set_reg('c', 0xff)
@@ -298,6 +298,36 @@ def test_dad_b(cpu, state):
     assert state.get_reg('hl') == 0x000f
     assert state.get_flag('c') == True
 
+def test_daa(cpu, state):
+    state.ram[0] = opcodebytes.DAA
+    state.set_reg('a', 0x9b)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 1
+    assert state.get_flag('a') == True
+    assert state.get_flag('c') == True
+
+def test_ana_b(cpu, state):
+    state.ram[0] = opcodebytes.ANA_B
+    state.set_reg('b', 0xdd)
+    state.set_reg('a', 0xd5)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 213
+    assert state.get_flag('c') == False
+    assert state.get_flag('p') == False
+
+def test_ana_m(cpu, state):
+    state.ram[0] = opcodebytes.ANA_M
+    state.set_reg('hl', 0x2222)
+    state.ram[0x2222] = 0xd5
+    state.set_reg('a', 0xdd)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 213
+
+def test_ani(cpu, state):
+    state.ram[0:2] = [opcodebytes.ANI, 0xd5]
+    state.set_reg('a', 0xdd)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 213
 
 @pytest.fixture
 def state():

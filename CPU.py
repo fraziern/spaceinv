@@ -64,6 +64,12 @@ class CPU():
         value = lsb | msb
         return value
 
+    def _set_nc_flags(self, byte_result): # set non-carry flags
+        self.state.set_flags({
+            's': bool(byte_result >> 7), # s
+            'z': bool(not byte_result),  # z
+            'p': not bool(sum(self._byte_to_bits(byte_result)) % 2), # p
+        })
 
     def _run(self, instruction:list):
         match instruction:
@@ -77,116 +83,113 @@ class CPU():
             # Data transfer group
             case [ 0, 0, 1, 1, 1, 0, 1, 0]: # instr_string = "LDA"
                 address = self._fetch_next_two_bytes()
-                self._mov(source_data=self.state.get_ram(address),
-                          dest_r='a')
+                self._mov(self.state.get_ram(address), 'a')
                 return 13
             case [ 0, 0, 1, 1, 0, 0, 1, 0]: # instr_string = "STA"
                 address = self._fetch_next_two_bytes()
-                self._mov(source_r='a', dest_addr=address)
+                self._mov('a', address)
                 return 13
             case [ 0, 0, 1, 0, 1, 0, 1, 0]: # instr_string = "LHLD"
                 address = self._fetch_next_two_bytes()
-                self._mov(source_data=self.state.get_ram(address),   dest_r='l')
-                self._mov(source_data=self.state.get_ram(address+1), dest_r='h')
+                self._mov(self.state.get_ram(address),   'l')
+                self._mov(self.state.get_ram(address+1), 'h')
                 return 16
             case [ 0, 0, 1, 0, 0, 0, 1, 0]: # instr_string = "SHLD"
                 address = self._fetch_next_two_bytes()
-                self._mov(source_r='l', dest_addr=address)
-                self._mov(source_r='h', dest_addr=address+1)
+                self._mov('l', address)
+                self._mov('h', address+1)
                 return 16
             case [ 0, 1, 1, 1, 0,s1,s2,s3]: # instr_string = "MOV M,r"
-                self._mov(source_r=self._get_r_from_bits([s1,s2,s3]),
-                          dest_addr_reg='hl')
+                self._mov(self._get_r_from_bits([s1,s2,s3]), 'hl', write_reg_address=True)
                 return 7
             case [ 0, 1,d1,d2,d3, 1, 1, 0]: # instr_string = "MOV r,M"
-                self._mov(source_addr_reg='hl',
-                          dest_r=self._get_r_from_bits([d1,d2,d3]))
+                data = self.state.get_ram('hl')
+                self._mov(data, self._get_r_from_bits([d1,d2,d3]))
                 return 7
             case [ 0, 1,d1,d2,d3,s1,s2,s3]: # instr_string = "MOV r1,r2"
-                self._mov(source_r=self._get_r_from_bits([s1,s2,s3]),
-                          dest_r=self._get_r_from_bits([d1,d2,d3]))
+                self._mov(self._get_r_from_bits([s1,s2,s3]),
+                          self._get_r_from_bits([d1,d2,d3]))
                 return 5
             case [ 0, 0, 1, 1, 0, 1, 1, 0]: # instr_string = "MVI M,data"
-                data = self._fetch_next_byte()
-                self._mov(source_data=data,
-                          dest_addr_reg='hl')
+                self._mov(self._fetch_next_byte(), 'hl', write_reg_address=True)
                 return 10
             case [ 1, 1, 1, 0, 1, 0, 1, 1]: # instr_string = "XCHG"
                 temp = self.state.get_reg('de')
-                self._mov(source_r='hl', dest_r='de')
-                self._mov(source_data=temp, dest_r='hl')
+                self._mov('hl', 'de')
+                self._mov(temp, 'hl')
                 return 4
             case [ 0, 0, r, p, 0, 0, 0, 1]: # instr_string = "LXI rp, data16"
-                data = self._fetch_next_two_bytes()
-                self._mov(source_data=data,
-                          dest_r=self._get_r_from_bits([r,p]))
+                self._mov(self._fetch_next_two_bytes(),
+                          self._get_r_from_bits([r,p]))
                 return 10
             case [ 0, 0, r, p, 1, 0, 1, 0]: # instr_string = "LDAX rp"
                 if r == 1:
                     raise ValueError("LDAX can only use register pairs BC and DE.")
-                self._mov(source_addr_reg=self._get_r_from_bits([r,p]),
-                          dest_r='a')
+                data = self.state.get_ram(self._get_r_from_bits([r,p]))
+                self._mov(data, 'a')
                 return 7
             case [ 0, 0, r, p, 0, 0, 1, 0]: # instr_string = "STAX rp"
                 if r == 1:
                     raise ValueError("STAX can only use register pairs BC and DE.")
-                self._mov(source_r='a', 
-                          dest_addr=self.state.get_reg(self._get_r_from_bits([r,p])))
+                self._mov('a', 
+                          self.state.get_reg(self._get_r_from_bits([r,p])))
                 return 7          
             case [ 0, 0,d1,d2,d3, 1, 1, 0]: # instr_string = "MVI r,data"
-                data = self._fetch_next_byte()
-                self._mov(source_data=data,
-                          dest_r=self._get_r_from_bits([d1,d2,d3]))
+                self._mov(self._fetch_next_byte(),
+                          self._get_r_from_bits([d1,d2,d3]))
                 return 7
             
             # Arithmetic group
+            case [ 0, 0, 1, 0, 0, 1, 1, 1]: # instr_string = "DAA rp"
+                self._daa()
+                return 4
             case [ 1, 0, 0, 0, 0, 1, 1, 0]: # instr_string = "ADD m"
-                data = self.state.get_ram(self.state.get_reg('hl'))
-                self._add(source_data=data)
+                data = self.state.get_ram('hl')
+                self._add(data)
                 return 7
             case [ 1, 0, 0, 0, 0,s1,s2,s3]: # instr_string = "ADD r"
                 source_reg = self._get_r_from_bits([s1,s2,s3])
-                self._add(source_r=source_reg)
+                self._add(source_reg)
                 return 4
             case [ 1, 1, 0, 0, 0, 1, 1, 0]: # instr_string = "ADI data"
                 data = self._fetch_next_byte()
-                self._add(source_data=data)
+                self._add(data)
                 return 7
             case [ 1, 1, 0, 0, 1, 1, 1, 0]: # instr_string = "ACI data"
                 data = self._fetch_next_byte()
-                self._add(source_data=data, add_carry=True)
+                self._add(data, add_carry=True)
                 return 7
             case [ 1, 0, 0, 0, 1, 1, 1, 0]: # instr_string = "ADC m"
-                data = self.state.get_ram(self.state.get_reg('hl'))
-                self._add(source_data=data, add_carry=True)
+                data = self.state.get_ram('hl')
+                self._add(data, add_carry=True)
                 return 7
             case [ 1, 0, 0, 0, 1,s1,s2,s3]: # instr_string = "ADC r"
                 source_reg = self._get_r_from_bits([s1,s2,s3])
-                self._add(source_r=source_reg, add_carry=True)
+                self._add(source_reg, add_carry=True)
                 return 4
             case [ 1, 0, 0, 1, 0, 1, 1, 0]: # instr_string = "SUB m"
-                data = self.state.get_ram(self.state.get_reg('hl'))
-                self._sub(source_data=data)
+                data = self.state.get_ram('hl')
+                self._sub(data)
                 return 7
             case [ 1, 0, 0, 1, 0,s1,s2,s3]: # instr_string = "SUB r"
                 source_reg = self._get_r_from_bits([s1,s2,s3])
-                self._sub(source_r=source_reg)
+                self._sub(source_reg)
                 return 4
             case [ 1, 0, 0, 1, 1, 1, 1, 0]: # instr_string = "SBB m"
-                data = self.state.get_ram(self.state.get_reg('hl'))
-                self._sub(source_data=data, sub_carry=True)
+                data = self.state.get_ram('hl')
+                self._sub(data, sub_carry=True)
                 return 7
             case [ 1, 0, 0, 1, 1,s1,s2,s3]: # instr_string = "SBB r"
                 source_reg = self._get_r_from_bits([s1,s2,s3])
-                self._sub(source_r=source_reg, sub_carry=True)
+                self._sub(source_reg, sub_carry=True)
                 return 4
             case [ 1, 1, 0, 1, 0, 1, 1, 0]: # instr_string = "SUI data"
                 data = self._fetch_next_byte()
-                self._sub(source_data=data)
+                self._sub(data)
                 return 7
             case [ 1, 1, 0, 1, 1, 1, 1, 0]: # instr_string = "SBI data"
                 data = self._fetch_next_byte()
-                self._sub(source_data=data, sub_carry=True)
+                self._sub(data, sub_carry=True)
                 return 7
             case [ 0, 0, 1, 1, 0, 1, 0, 0]: # instr_string = "INR M"
                 self._inc(use_hl_address=True)
@@ -211,34 +214,49 @@ class CPU():
             case [ 0, 0, r, p, 1, 0, 0, 1]: # instr_string = "DAD rp"
                 self._dad(self._get_r_from_bits([r,p]))
                 return 10
+            
+            # logical group
+            case [ 1, 0, 1, 0, 0, 1, 1, 0]: # instr_string = "ANA M"
+                data = self.state.get_ram('hl')
+                self._ana(data)
+                return 7
+            case [ 1, 0, 1, 0, 0,s1,s2,s3]: # instr_string = "ANA r"
+                self._ana(self._get_r_from_bits([s1,s2,s3]))
+                return 4
+            case [ 1, 1, 1, 0, 0, 1, 1, 0]: # instr_string = "ANI data"
+                self._ana(self._fetch_next_byte())
+                return 7
+            case [ 1, 0, 1, 0, 1, 1, 1, 0]: # instr_string = "XRA M"
+                data = self.state.get_ram('hl')
+                self._xra(data)
+                return 7
+            case [ 1, 0, 1, 0, 1,s1,s2,s3]: # instr_string = "XRA r"
+                self._xra(self._get_r_from_bits([s1,s2,s3]))
+                return 4
+            case [ 1, 1, 1, 0, 1, 1, 1, 0]: # instr_string = "XRI data"
+                self._xra(self._fetch_next_byte())
+                return 7
             case _:
                 raise NotImplementedError()
             
     
-    def _mov(self, source_data=None, source_r=None, source_addr_reg=None, dest_addr=None,
-             dest_r=None, dest_addr_reg=None):
-        if source_data:
-            source = source_data
-        elif source_r:
-            source = self.state.get_reg(source_r)
-        elif source_addr_reg:
-            source = self.state.get_ram(self.state.get_reg(source_addr_reg))
+    def _mov(self, source, dest, write_reg_address=False):
+        # source can be a register or direct data.
+        if isinstance(source, str):  # register
+            source = self.state.get_reg(source)
         
-        if dest_addr:
-            self.state.set_ram(dest_addr, source)
-        elif dest_r:
-            self.state.set_reg(dest_r, source)
-        elif dest_addr_reg:
-            self.state.set_ram(self.state.get_reg(dest_addr_reg), source)
+        if isinstance(dest, str):
+            if write_reg_address:
+                self.state.set_ram(self.state.get_reg(dest), source)
+            else:
+                self.state.set_reg(dest, source)
         else:
-            raise ValueError("Destination not defined for move instruction.")
+            self.state.set_ram(dest, source)
 
-    def _add(self, source_data=None, source_r=None, add_carry=False, use_negative=False):
+    def _add(self, source, add_carry=False, use_negative=False):
         acc_value = self.state.get_reg('a')
-        if source_r:
-            source = self.state.get_reg(source_r)
-        elif source_data:
-            source = source_data
+        if isinstance(source, str):
+            source = self.state.get_reg(source)
         
         # add carry bit if add_carry is True
         source = source + self.state.get_flag('c') if add_carry else source
@@ -249,44 +267,29 @@ class CPU():
         byte_result = (source + acc_value) & 0xff
         self.state.set_reg('a', byte_result)
         # condition flag checks
-        flags = [
-            bool(byte_result >> 7), # s
-            bool(not byte_result),  # z
-            False,
-            ((source & 0xf) + (acc_value & 0xf) > 0xf), # ac
-            False,
-            not bool(sum(self._byte_to_bits(byte_result)) % 2), # p
-            False,
-            ((-source > acc_value) if use_negative else 
+        self._set_nc_flags(byte_result)
+        self.state.set_flags({
+            'a': ((source & 0xf) + (acc_value & 0xf) > 0xf), # ac
+            'c': ((-source > acc_value) if use_negative else 
              (source + acc_value >= 0xff)) # c
-        ]
-        self.state.set_flags(flags)
+        })
 
     def _inc(self, register=None, use_hl_address=False, negative=False):
         inc_by = -1 if negative else 1
         if register:
             initial_value = self.state.get_reg(register)
-            byte_result = (initial_value + inc_by) % 256
+            byte_result = (initial_value + inc_by) & 0xff
             self.state.set_reg(register, byte_result)
         elif use_hl_address:
             address = self.state.get_reg('hl')
             initial_value = self.state.get_ram(address)
             byte_result = (initial_value + inc_by) & 0xff
             self.state.set_ram(address, byte_result)
-        flags = [
-            bool(byte_result >> 7), # s
-            bool(not byte_result),  # z
-            False,
-            ((initial_value & 0xf) + inc_by > 0xf), # ac
-            False,
-            not bool(sum(self._byte_to_bits(byte_result)) % 2), # p
-            False,
-            self.state.get_flag('c') # don't touch c here
-        ]
-        self.state.set_flags(flags)
+        self._set_nc_flags(byte_result)
+        self.state.set_flag('a',((initial_value & 0xf) + inc_by > 0xf))
 
-    def _sub(self, source_data=None, source_r=None, sub_carry=False):
-        self._add(source_data, source_r, add_carry=sub_carry, use_negative=True)
+    def _sub(self, source, sub_carry=False):
+        self._add(source, add_carry=sub_carry, use_negative=True)
 
     def _dec(self, register=None, use_hl_address=False):
         self._inc(register, use_hl_address, negative=True)
@@ -297,6 +300,42 @@ class CPU():
         result = self.state.get_reg(register) + hl_value
         self.state.set_reg('hl', result & 0xffff)
         self.state.set_flag('c', result > 0xffff)
+
+    def _daa(self):
+        if ((self.state.get_reg('a') & 0xf) > 9) or self.state.get_flag('a'):
+            self._add(6)
+        saved_aux_carry = self.state.get_flag('a') # save aux carry value in case of overwrite
+        if ((self.state.get_reg('a') >> 4) > 9) or self.state.get_flag('c'):
+            self._add(6 << 4)
+            self.state.set_flag('a', saved_aux_carry)
+
+    def _logic(self, register_or_data, operation):
+        if isinstance(register_or_data, str):  # register
+            source = self.state.get_reg(register_or_data)
+        else:
+            source = register_or_data
+        match operation:
+            case 'and':
+                byte_result = self.state.get_reg('a') & source
+            case 'or':
+                byte_result = self.state.get_reg('a') | source
+            case 'xor':
+                byte_result = self.state.get_reg('a') ^ source
+
+        self.state.set_reg('a', byte_result)
+
+        self._set_nc_flags(byte_result)
+        self.state.set_flag('c', False)  
+        self.state.set_flag('a', False)
+
+    def _ana(self, register_or_data):
+        self._logic(register_or_data, 'and')
+    
+    def _xra(self, register_or_data):
+        self._logic(register_or_data, 'xor')
+    
+    def _ora(self, register_or_data):
+        self._logic(register_or_data, 'or')
 
 
     def run_cycle(self):
