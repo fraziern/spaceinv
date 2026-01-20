@@ -236,6 +236,29 @@ class CPU():
             case [ 1, 1, 1, 0, 1, 1, 1, 0]: # instr_string = "XRI data"
                 self._xra(self._fetch_next_byte())
                 return 7
+            case [ 1, 0, 1, 1, 0, 1, 1, 0]: # instr_string = "ORA M"
+                data = self.state.get_ram('hl')
+                self._ora(data)
+                return 7
+            case [ 1, 0, 1, 1, 0,s1,s2,s3]: # instr_string = "ORA r"
+                self._ora(self._get_r_from_bits([s1,s2,s3]))
+                return 4
+            case [ 1, 1, 1, 1, 0, 1, 1, 0]: # instr_string = "ORI data"
+                self._ora(self._fetch_next_byte())
+                return 7
+            case [ 1, 0, 1, 1, 1, 1, 1, 0]: # instr_string = "CMP M"
+                data = self.state.get_ram('hl')
+                self._cmp(data)
+                return 7
+            case [ 1, 0, 1, 1, 1,s1,s2,s3]: # instr_string = "CMP r"
+                self._cmp(self._get_r_from_bits([s1,s2,s3]))
+                return 4
+            case [ 1, 1, 1, 1, 1, 1, 1, 0]: # instr_string = "CPI data"
+                self._cmp(self._fetch_next_byte())
+                return 7
+            case [ 0, 0, 0, 0, 0, 1, 1, 1]: # instr_string = "RLC"
+                self._rlc()
+                return 4
             case _:
                 raise NotImplementedError()
             
@@ -336,6 +359,23 @@ class CPU():
     
     def _ora(self, register_or_data):
         self._logic(register_or_data, 'or')
+
+    def _cmp(self, register_or_data):
+        saved_acc_value = self.state.get_reg('a')
+        self._sub(register_or_data)
+        self.state.set_reg('a', saved_acc_value)
+
+    def _rlc(self):
+        acc_value = self.state.get_reg('a')
+        high_bit = acc_value >> 7
+        self.state.set_reg('a', (acc_value << 1) | high_bit)
+        self.state.set_flag('c', high_bit)
+    
+    def _rrc(self):
+        acc_value = self.state.get_reg('a')
+        low_bit = acc_value & 0x01
+        self.state.set_reg('a', (acc_value >> 1) | (low_bit << 7))
+        self.state.set_flag('c', low_bit)
 
 
     def run_cycle(self):

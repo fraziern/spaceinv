@@ -329,6 +329,40 @@ def test_ani(cpu, state):
     cpu.run_cycle()
     assert state.get_reg('a') == 213
 
+def test_xra_c(cpu, state):
+    state.ram[0] = opcodebytes.XRA_C
+    state.set_reg('c', 0xdd)
+    state.set_reg('a', 0xd5)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 8
+    assert state.get_flag('c') == False
+
+def test_ora_c(cpu, state):
+    state.ram[0] = opcodebytes.ORA_C
+    state.set_reg('c', 0xdd)
+    state.set_reg('a', 0xd5)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 221
+    assert state.get_flag('c') == False
+
+def test_cmp_e(cpu, state):
+    state.ram[0] = opcodebytes.CMP_E
+    state.set_reg('e', 0x05)
+    state.set_reg('a', 0x0a)
+    cpu.run_cycle()
+    assert state.get_flag('c') == False
+    assert state.get_flag('z') == False
+    assert state.get_reg('a') == 0x0a
+
+def test_rlc(cpu, state):
+    state.ram[0] = opcodebytes.RLC
+    state.set_reg('a', 0xf2)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0xe5
+    assert state.get_flag('c') == True
+
+ 
+
 @pytest.fixture
 def state():
     return State()
