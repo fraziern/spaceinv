@@ -361,7 +361,48 @@ def test_rlc(cpu, state):
     assert state.get_reg('a') == 0xe5
     assert state.get_flag('c') == True
 
- 
+def test_rrc(cpu, state):
+    state.ram[0] = opcodebytes.RRC
+    state.set_reg('a', 0xf2)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0x79
+    assert state.get_flag('c') == False
+
+def test_ral(cpu, state):
+    state.ram[0] = opcodebytes.RAL
+    state.set_reg('a', 0xb5)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0x6a
+    assert state.get_flag('c') == True
+
+def test_rar(cpu, state):
+    state.ram[0] = opcodebytes.RAR
+    state.set_reg('a', 0x6a)
+    state.set_flag('c',True)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0xb5
+    assert state.get_flag('c') == False
+
+def test_cma(cpu, state):
+    state.ram[0] = opcodebytes.CMA
+    state.set_reg('a', 0x51)
+    cpu.run_cycle()
+    assert state.get_reg('a') == 0xae
+
+def test_cmc(cpu, state):
+    state.ram[0] = opcodebytes.CMC
+    state.set_flag('c', False)
+    cpu.run_cycle()
+    assert state.get_flag('c') == True
+
+def test_stc(cpu, state):
+    state.ram[0:2] = [opcodebytes.STC, opcodebytes.STC]
+    state.set_flag('c', False)
+    cpu.run_cycle()
+    assert state.get_flag('c') == True
+    cpu.run_cycle()
+    assert state.get_flag('c') == True
+
 
 @pytest.fixture
 def state():

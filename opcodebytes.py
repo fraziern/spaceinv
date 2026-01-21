@@ -252,3 +252,13 @@ CPI = 0xfe
 
 # rotate instructions
 RLC = 0x07
+RRC = 0x0f
+RAL = 0x17
+RAR = 0x1f
+
+# complement acc
+CMA = 0x2f
+
+# carry bit instructions
+CMC = 0x3f
+STC = 0x37

@@ -259,6 +259,26 @@ class CPU():
             case [ 0, 0, 0, 0, 0, 1, 1, 1]: # instr_string = "RLC"
                 self._rlc()
                 return 4
+            case [ 0, 0, 0, 0, 1, 1, 1, 1]: # instr_string = "RRC"
+                self._rrc()
+                return 4
+            case [ 0, 0, 0, 1, 0, 1, 1, 1]: # instr_string = "RAL"
+                self._ral()
+                return 4
+            case [ 0, 0, 0, 1, 1, 1, 1, 1]: # instr_string = "RAR"
+                self._rar()
+                return 4
+            case [ 0, 0, 1, 0, 1, 1, 1, 1]: # instr_string = "CMA"
+                acc_value = self.state.get_reg('a')
+                self.state.set_reg('a', ~acc_value & 0xff)
+                return 4
+            case [ 0, 0, 1, 1, 1, 1, 1, 1]: # instr_string = "CMC"
+                carry = self.state.get_flag('c')
+                self.state.set_flag('c', (carry == False))
+                return 4
+            case [ 0, 0, 1, 1, 0, 1, 1, 1]: # instr_string = "STC"
+                self.state.set_flag('c', True)
+                return 4
             case _:
                 raise NotImplementedError()
             
@@ -375,6 +395,20 @@ class CPU():
         acc_value = self.state.get_reg('a')
         low_bit = acc_value & 0x01
         self.state.set_reg('a', (acc_value >> 1) | (low_bit << 7))
+        self.state.set_flag('c', low_bit)
+
+    def _ral(self):
+        acc_value = self.state.get_reg('a')
+        carry = int(self.state.get_flag('c'))
+        high_bit = acc_value >> 7
+        self.state.set_reg('a', (acc_value << 1) | carry)
+        self.state.set_flag('c', high_bit)
+    
+    def _rar(self):
+        acc_value = self.state.get_reg('a')
+        carry = int(self.state.get_flag('c'))
+        low_bit = bool(acc_value & 0x01)
+        self.state.set_reg('a', (acc_value >> 1) | (carry << 7))
         self.state.set_flag('c', low_bit)
 
 
