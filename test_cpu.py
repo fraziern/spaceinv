@@ -403,6 +403,39 @@ def test_stc(cpu, state):
     cpu.run_cycle()
     assert state.get_flag('c') == True
 
+# jump instructions
+def test_jmp(cpu, state):
+    state.ram[0:2] = [opcodebytes.JMP, 0x20, 0x21]
+    cpu.run_cycle()
+    assert state.get_pc() == 0x2120
+
+def test_jpo(cpu, state):
+    state.ram[0:2] = [opcodebytes.JPO, 0x20, 0x21]
+    state.set_flag('p', False)
+    cpu.run_cycle()
+    assert state.get_pc() == 0x2120
+
+# call instructions
+def test_call(cpu, state):
+    state.ram[0:2] = [opcodebytes.CALL, 0x20, 0x21]
+    cpu.run_cycle()
+    assert state.get_ram(state.get_sp()) == 0x0003 # stack @ stack pointer should point to instruction 3
+    state.ram[0x2120] = opcodebytes.STC # set-carry-flag instruction
+    cpu.run_cycle()
+    assert state.get_flag('c') == True
+
+def test_cc_notset(cpu, state):
+    state.ram[0:2] = [opcodebytes.CC, 0x20, 0x21]
+    cpu.run_cycle()
+    assert state.get_pc() == 0x0003
+
+def test_cc_set(cpu, state):
+    state.ram[0:2] = [opcodebytes.CC, 0x20, 0x21]
+    state.set_flag('c',True)
+    cpu.run_cycle()
+    assert state.get_ram(state.get_sp()) == 0x0003 # stack @ stack pointer should point to instruction 3
+    assert state.get_pc() == 0x2120
+
 
 @pytest.fixture
 def state():

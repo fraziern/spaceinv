@@ -71,10 +71,11 @@ class State():
             raise ValueError(f"Attempting to read non-existent register: {reg_code}")
     
     def get_sp(self):
-        # convenience method
-        return self.get_reg('sp')
+        return self.sp
     
-    
+    def set_sp(self, value):
+        self.sp = value % self.MEMORY_SIZE
+
     def increment_pc(self):
         self.pc = (self.pc + 1) % self.MEMORY_SIZE
 

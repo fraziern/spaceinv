@@ -38,16 +38,19 @@ class CPU():
         return list_of_bits
     
 
-    def _get_r_from_bits(self, bits):
+    def _get_int_from_bits(self, bits:list) -> int:
         binary_string = "".join(map(str, bits))
         decimal_number = int(binary_string, 2)
+        return decimal_number
+    
+
+    def _get_r_from_bits(self, bits):
+        decimal_number = self._get_int_from_bits(bits)
         if len(bits) == 2:
             # rp
             return register_codes_16b[decimal_number]
         elif len(bits) == 3:
             return register_codes[decimal_number]
-        else:
-            raise ValueError("Incorrect number of bits for conversion.")
 
 
     def _fetch_next_byte(self):
@@ -279,6 +282,31 @@ class CPU():
             case [ 0, 0, 1, 1, 0, 1, 1, 1]: # instr_string = "STC"
                 self.state.set_flag('c', True)
                 return 4
+            
+            # branch instructions
+            case [ 1, 1, 0, 0, 0, 0, 1, 1]: # instr_string = "JMP data"
+                data = self._fetch_next_two_bytes()
+                self.state.set_pc(data)
+                return 10
+            case [ 1, 1,c1,c2,c3, 0, 1, 0]: # instr_string = "Jcondition data"
+                data = self._fetch_next_two_bytes()
+                if self._check_conditions(self._get_int_from_bits([c1,c2,c3])):
+                    self.state.set_pc(data)
+                return 10
+            
+            # call instructions
+            case [ 1, 1, 0, 0, 1, 1, 0, 1]: # instr_string = "CALL addr"
+                data = self._fetch_next_two_bytes()
+                self._call(data)
+                return 17
+            case [ 1, 1,c1,c2,c3, 1, 0, 0]: # instr_string = "Ccondition addr"
+                data = self._fetch_next_two_bytes()
+                if self._check_conditions(self._get_int_from_bits([c1,c2,c3])):
+                    self._call(data)
+                    return 11
+                return 17
+
+            
             case _:
                 raise NotImplementedError()
             
@@ -411,9 +439,36 @@ class CPU():
         self.state.set_reg('a', (acc_value >> 1) | (carry << 7))
         self.state.set_flag('c', low_bit)
 
+    def _check_conditions(self, operation:int) -> bool:
+        match operation:
+            case 0b000:
+                return self.state.get_flag('z') == False
+            case 0b001:
+                return self.state.get_flag('z') == True
+            case 0b010:
+                return self.state.get_flag('c') == False
+            case 0b011:
+                return self.state.get_flag('c') == True
+            case 0b100:
+                return self.state.get_flag('p') == False
+            case 0b101:
+                return self.state.get_flag('p') == True
+            case 0b110:
+                return self.state.get_flag('s') == False
+            case 0b111:
+                return self.state.get_flag('s') == True
+
+    def _call(self, address):
+        sp_start = self.state.get_sp()
+        pc = self.state.get_pc()
+        self.state.set_ram(sp_start - 1, pc >> 8) # PCH
+        self.state.set_ram(sp_start - 2, pc & 0xff) # PCL
+        self.state.set_sp(sp_start - 2)
+        self.state.set_pc(address)
+
 
     def run_cycle(self):
-        # 1. Fetch instruction opcode
+        # 1. Fetch instruction opcode, advance PC
         op = self._fetch_next_byte()
         # 2. Decode, into list of bits
         instruction_bits = self._byte_to_bits(op)
