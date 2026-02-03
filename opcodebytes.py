@@ -274,6 +274,8 @@ JNC = 0xd2
 JC  = 0xda
 JM  = 0xfa
 
+PCHL = 0xe9
+
 # call instructions
 CALL  = 0xcd
 CALL2 = 0xdd

@@ -317,6 +317,10 @@ class CPU():
                 address = self._bits_to_int([n1,n2,n3]) * 8
                 self._call(address)
                 return 11
+            case [ 1, 1, 1, 0, 1, 0, 0, 1]: # instr_string = "PCHL"
+                self.state.set_pc(self.state.get_reg('hl'))
+                return 5
+            
             case _:
                 raise NotImplementedError()
             

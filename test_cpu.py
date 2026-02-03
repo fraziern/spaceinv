@@ -444,7 +444,15 @@ def test_ret(cpu, state):
     assert state.get_pc() ==0x0003
 
 def test_rst(cpu, state):
-    assert True == False
+    state.ram[0] = opcodebytes.RST_1 # call $8
+    cpu.run_cycle()
+    assert state.get_pc() == 0x0008
+
+def test_pchl(cpu, state):
+    state.ram[0] = opcodebytes.PCHL
+    state.set_reg('hl', 0x2120)
+    cpu.run_cycle()
+    assert state.get_pc() == 0x2120
     
 
 @pytest.fixture
