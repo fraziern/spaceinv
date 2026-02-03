@@ -436,6 +436,16 @@ def test_cc_set(cpu, state):
     assert state.get_ram(state.get_sp()) == 0x0003 # stack @ stack pointer should point to instruction 3
     assert state.get_pc() == 0x2120
 
+def test_ret(cpu, state):
+    state.ram[0:2] = [opcodebytes.CALL, 0x20, 0x21]
+    state.ram[0x2120] = opcodebytes.RET
+    cpu.run_cycle()
+    cpu.run_cycle()
+    assert state.get_pc() ==0x0003
+
+def test_rst(cpu, state):
+    assert True == False
+    
 
 @pytest.fixture
 def state():

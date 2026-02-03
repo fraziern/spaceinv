@@ -38,14 +38,14 @@ class CPU():
         return list_of_bits
     
 
-    def _get_int_from_bits(self, bits:list) -> int:
+    def _bits_to_int(self, bits:list) -> int:
         binary_string = "".join(map(str, bits))
         decimal_number = int(binary_string, 2)
         return decimal_number
     
 
     def _get_r_from_bits(self, bits):
-        decimal_number = self._get_int_from_bits(bits)
+        decimal_number = self._bits_to_int(bits)
         if len(bits) == 2:
             # rp
             return register_codes_16b[decimal_number]
@@ -290,7 +290,7 @@ class CPU():
                 return 10
             case [ 1, 1,c1,c2,c3, 0, 1, 0]: # instr_string = "Jcondition data"
                 data = self._fetch_next_two_bytes()
-                if self._check_conditions(self._get_int_from_bits([c1,c2,c3])):
+                if self._check_conditions(self._bits_to_int([c1,c2,c3])):
                     self.state.set_pc(data)
                 return 10
             
@@ -301,12 +301,22 @@ class CPU():
                 return 17
             case [ 1, 1,c1,c2,c3, 1, 0, 0]: # instr_string = "Ccondition addr"
                 data = self._fetch_next_two_bytes()
-                if self._check_conditions(self._get_int_from_bits([c1,c2,c3])):
+                if self._check_conditions(self._bits_to_int([c1,c2,c3])):
                     self._call(data)
+                    return 17
+                return 11
+            case [ 1, 1, 0, 0, 1, 0, 0, 1]: # instr_string = "RET"
+                self._ret()
+                return 10
+            case [ 1, 1,c1,c2,c3, 0, 0, 0]: # instr_string = "Rcondition"
+                if self._check_conditions(self._bits_to_int([c1,c2,c3])):
+                    self._ret()
                     return 11
-                return 17
-
-            
+                return 5
+            case [ 1, 1,n1,n2,n3, 1, 1, 1]: # instr_string = "RST n"
+                address = self._bits_to_int([n1,n2,n3]) * 8
+                self._call(address)
+                return 11
             case _:
                 raise NotImplementedError()
             
@@ -465,6 +475,13 @@ class CPU():
         self.state.set_ram(sp_start - 2, pc & 0xff) # PCL
         self.state.set_sp(sp_start - 2)
         self.state.set_pc(address)
+
+    def _ret(self):
+        sp_current = self.state.get_sp()
+        pcl = self.state.get_ram(sp_current)
+        pch = self.state.get_ram(sp_current + 1)
+        self.state.set_pc((pch << 8) | pcl)
+        self.state.set_sp(sp_current + 2)
 
 
     def run_cycle(self):
