@@ -453,6 +453,14 @@ def test_pchl(cpu, state):
     state.set_reg('hl', 0x2120)
     cpu.run_cycle()
     assert state.get_pc() == 0x2120
+
+def test_push(cpu, state):
+    sp_start = state.get_sp()
+    state.ram[0] = opcodebytes.PUSH_B
+    state.set_reg('bc', 0x6a77)
+    cpu.run_cycle()
+    assert state.get_sp() == sp_start - 2
+    assert state.get_ram(state.get_sp()) == 0x77
     
 
 @pytest.fixture

@@ -1,3 +1,5 @@
+from utils import bits_to_int, byte_to_bits
+
 reg_indices = {
     'b':0,
     'c':1,
@@ -7,6 +9,14 @@ reg_indices = {
     'l':5,
     'a':6,
     }
+
+flag_indices = {
+    's':0,
+    'z':1,
+    'a':3,
+    'p':5,
+    'c':7
+}
 
 class State():
 
@@ -20,7 +30,7 @@ class State():
         self.pc = self.ROMSTART
         self.ram = bytearray(self.MEMORY_SIZE)
         self.sp = self.STACKSTART
-        self.flags = {f:False for f in 'szaapc'}
+        self.flags = [0,0,0,0,0,0,1,0]
 
     def __str__(self):
         string = ""
@@ -33,15 +43,22 @@ class State():
 
 
     def get_flag(self, flag:str) -> bool:
-        return self.flags[flag]
+        return bool(self.flags[flag_indices[flag]])
     
     def set_flag(self, flag:str, value:bool):
-        self.flags[flag] = value
+        self.flags[flag_indices[flag]] = int(value)
     
     def set_flags(self, values:dict[str, bool]):
-        # set all the flags at once
-        self.flags |= values
-        
+        for (flag,value) in values.items():
+            self.set_flag(flag, value)
+
+    def get_psw(self) -> int:
+        # convenience function for getting PSW
+        return bits_to_int(self.flags)
+    
+    def set_psw(self, psw:int):
+        self.flags = byte_to_bits(psw)
+
 
     def set_reg(self, reg_code, value):
         if type(value) == bytes or type(value) == bytearray:

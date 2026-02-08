@@ -1,4 +1,5 @@
 from State import State
+from utils import bits_to_int, byte_to_bits
 
 register_codes = {
     0b111: 'a',
@@ -25,27 +26,10 @@ class CPU():
         self.state = state
         self.switches = switches
         self.display = display
-
-
-    def _byte_to_bits(self, op):
-        # Not exactly a "decode" but used to get bits in opcode
-        # Format the integer to a binary string, padding with leading zeros to ensure correct length
-        binary_string = format(op, f'08b')
-
-        # Convert the binary string to a list of integers (bits)
-        list_of_bits = [int(bit) for bit in binary_string]
-
-        return list_of_bits
-    
-
-    def _bits_to_int(self, bits:list) -> int:
-        binary_string = "".join(map(str, bits))
-        decimal_number = int(binary_string, 2)
-        return decimal_number
     
 
     def _get_r_from_bits(self, bits):
-        decimal_number = self._bits_to_int(bits)
+        decimal_number = bits_to_int(bits)
         if len(bits) == 2:
             # rp
             return register_codes_16b[decimal_number]
@@ -71,7 +55,7 @@ class CPU():
         self.state.set_flags({
             's': bool(byte_result >> 7), # s
             'z': bool(not byte_result),  # z
-            'p': not bool(sum(self._byte_to_bits(byte_result)) % 2), # p
+            'p': not bool(sum(byte_to_bits(byte_result)) % 2), # p
         })
 
     def _run(self, instruction:list):
@@ -290,7 +274,7 @@ class CPU():
                 return 10
             case [ 1, 1,c1,c2,c3, 0, 1, 0]: # instr_string = "Jcondition data"
                 data = self._fetch_next_two_bytes()
-                if self._check_conditions(self._bits_to_int([c1,c2,c3])):
+                if self._check_conditions(bits_to_int([c1,c2,c3])):
                     self.state.set_pc(data)
                 return 10
             
@@ -301,7 +285,7 @@ class CPU():
                 return 17
             case [ 1, 1,c1,c2,c3, 1, 0, 0]: # instr_string = "Ccondition addr"
                 data = self._fetch_next_two_bytes()
-                if self._check_conditions(self._bits_to_int([c1,c2,c3])):
+                if self._check_conditions(bits_to_int([c1,c2,c3])):
                     self._call(data)
                     return 17
                 return 11
@@ -309,18 +293,24 @@ class CPU():
                 self._ret()
                 return 10
             case [ 1, 1,c1,c2,c3, 0, 0, 0]: # instr_string = "Rcondition"
-                if self._check_conditions(self._bits_to_int([c1,c2,c3])):
+                if self._check_conditions(bits_to_int([c1,c2,c3])):
                     self._ret()
                     return 11
                 return 5
             case [ 1, 1,n1,n2,n3, 1, 1, 1]: # instr_string = "RST n"
-                address = self._bits_to_int([n1,n2,n3]) * 8
+                address = bits_to_int([n1,n2,n3]) * 8
                 self._call(address)
                 return 11
             case [ 1, 1, 1, 0, 1, 0, 0, 1]: # instr_string = "PCHL"
                 self.state.set_pc(self.state.get_reg('hl'))
                 return 5
             
+            # push pop
+            case [ 1, 1, r, p, 0, 1, 0, 1]: # instr_string = "PUSH rp"
+                register = self._get_r_from_bits([r,p])
+                self._push(register)
+                return 11
+
             case _:
                 raise NotImplementedError()
             
@@ -472,27 +462,59 @@ class CPU():
             case 0b111:
                 return self.state.get_flag('s') == True
 
-    def _call(self, address):
+    def _push_to_stack(self, value):
         sp_start = self.state.get_sp()
-        pc = self.state.get_pc()
-        self.state.set_ram(sp_start - 1, pc >> 8) # PCH
-        self.state.set_ram(sp_start - 2, pc & 0xff) # PCL
+        self.state.set_ram(sp_start - 1, value >> 8)
+        self.state.set_ram(sp_start - 2, value & 0xff)
         self.state.set_sp(sp_start - 2)
+    
+    def _pop_from_stack(self):
+        sp_start = self.state.get_sp()
+        sl = self.state.get_ram(sp_start)
+        sh = self.state.get_ram(sp_start + 1)
+        self.state.set_sp(sp_start + 2)
+        return ((sh << 8) | sl)
+    
+    def _call(self, address):
+        pc = self.state.get_pc()
+        self._push_to_stack(pc)
         self.state.set_pc(address)
 
     def _ret(self):
-        sp_current = self.state.get_sp()
-        pcl = self.state.get_ram(sp_current)
-        pch = self.state.get_ram(sp_current + 1)
-        self.state.set_pc((pch << 8) | pcl)
-        self.state.set_sp(sp_current + 2)
+        value = self._pop_from_stack()
+        self.state.set_pc(value)
+
+    def _push(self, register):
+        if register == 'sp':
+            raise ValueError("SP may not be pushed in PUSH operation.")
+        value = self.state.get_reg(register)
+        self._push_to_stack(value)
+    
+    def _pop(self):
+        pass
+
+    def _pushpsw(self):
+        psw = self.state.get_psw()
+        a = self.state.get_reg('a')
+        self._push_to_stack((a << 8) | psw)
+    
+    def _poppsw(self):
+        value = self._pop_from_stack()
+        a = value >> 8
+        psw = value & 0xff
+        self.state.set_reg('a', a)
+        self.state.set_psw(psw)
+
+
+        
+        
 
 
     def run_cycle(self):
         # 1. Fetch instruction opcode, advance PC
         op = self._fetch_next_byte()
         # 2. Decode, into list of bits
-        instruction_bits = self._byte_to_bits(op)
+        instruction_bits = byte_to_bits(op)
         try:
             used_cycles = self._run(instruction_bits)
         except NotImplementedError:
