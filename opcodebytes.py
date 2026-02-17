@@ -1,324 +1,337 @@
 # opcode bytes
-# TODO turn this into a class?
+class Opcodebytes():
 
-# NOP - no operation
-NOP     = 0x00
+    # NOP - no operation
+    NOP     = 0x00
 
-# Data transfer group
-#   Move operations (MOV)
-MOV_B_B = 0x40
-MOV_B_C = 0x41
-MOV_B_D = 0x42
-MOV_B_E = 0x43
-MOV_B_H = 0x44
-MOV_B_L = 0x45
-MOV_B_M = 0x46
-MOV_B_A = 0x47
-MOV_C_B = 0x48
-MOV_C_C = 0x49
-MOV_C_D = 0x4a
-MOV_C_E = 0x4b
-MOV_C_H = 0x4c
-MOV_C_L = 0x4d
-MOV_C_M = 0x4e
-MOV_C_A = 0x4f
-MOV_D_B = 0x50
-MOV_D_C = 0x51
-MOV_D_D = 0x52
-MOV_D_E = 0x53
-MOV_D_H = 0x54
-MOV_D_L = 0x55
-MOV_D_M = 0x56
-MOV_D_A = 0x57
-MOV_E_B = 0x58
-MOV_E_C = 0x59
-MOV_E_D = 0x5a
-MOV_E_E = 0x5b
-MOV_E_H = 0x5c
-MOV_E_L = 0x5d
-MOV_E_M = 0x5e
-MOV_E_A = 0x5f
-MOV_H_B = 0x60
-MOV_H_C = 0x61
-MOV_H_D = 0x62
-MOV_H_E = 0x63
-MOV_H_H = 0x64
-MOV_H_L = 0x65
-MOV_H_M = 0x66
-MOV_H_A = 0x67
-MOV_L_B = 0x68
-MOV_L_C = 0x69
-MOV_L_D = 0x6a
-MOV_L_E = 0x6b
-MOV_L_H = 0x6c
-MOV_L_L = 0x6d
-MOV_L_M = 0x6e
-MOV_L_A = 0x6f
-MOV_M_B = 0x70
-MOV_M_C = 0x71
-MOV_M_D = 0x72
-MOV_M_E = 0x73
-MOV_M_H = 0x74
-MOV_M_L = 0x75
-MOV_M_A = 0x77
-MOV_A_B = 0x78
-MOV_A_C = 0x79
-MOV_A_D = 0x7a
-MOV_A_E = 0x7b
-MOV_A_H = 0x7c
-MOV_A_L = 0x7d
-MOV_A_M = 0x7e
-MOV_A_A = 0x7f
+    # Data transfer group
+    #   Move operations (MOV)
+    MOV_B_B = 0x40
+    MOV_B_C = 0x41
+    MOV_B_D = 0x42
+    MOV_B_E = 0x43
+    MOV_B_H = 0x44
+    MOV_B_L = 0x45
+    MOV_B_M = 0x46
+    MOV_B_A = 0x47
+    MOV_C_B = 0x48
+    MOV_C_C = 0x49
+    MOV_C_D = 0x4a
+    MOV_C_E = 0x4b
+    MOV_C_H = 0x4c
+    MOV_C_L = 0x4d
+    MOV_C_M = 0x4e
+    MOV_C_A = 0x4f
+    MOV_D_B = 0x50
+    MOV_D_C = 0x51
+    MOV_D_D = 0x52
+    MOV_D_E = 0x53
+    MOV_D_H = 0x54
+    MOV_D_L = 0x55
+    MOV_D_M = 0x56
+    MOV_D_A = 0x57
+    MOV_E_B = 0x58
+    MOV_E_C = 0x59
+    MOV_E_D = 0x5a
+    MOV_E_E = 0x5b
+    MOV_E_H = 0x5c
+    MOV_E_L = 0x5d
+    MOV_E_M = 0x5e
+    MOV_E_A = 0x5f
+    MOV_H_B = 0x60
+    MOV_H_C = 0x61
+    MOV_H_D = 0x62
+    MOV_H_E = 0x63
+    MOV_H_H = 0x64
+    MOV_H_L = 0x65
+    MOV_H_M = 0x66
+    MOV_H_A = 0x67
+    MOV_L_B = 0x68
+    MOV_L_C = 0x69
+    MOV_L_D = 0x6a
+    MOV_L_E = 0x6b
+    MOV_L_H = 0x6c
+    MOV_L_L = 0x6d
+    MOV_L_M = 0x6e
+    MOV_L_A = 0x6f
+    MOV_M_B = 0x70
+    MOV_M_C = 0x71
+    MOV_M_D = 0x72
+    MOV_M_E = 0x73
+    MOV_M_H = 0x74
+    MOV_M_L = 0x75
+    MOV_M_A = 0x77
+    MOV_A_B = 0x78
+    MOV_A_C = 0x79
+    MOV_A_D = 0x7a
+    MOV_A_E = 0x7b
+    MOV_A_H = 0x7c
+    MOV_A_L = 0x7d
+    MOV_A_M = 0x7e
+    MOV_A_A = 0x7f
 
-#   move immediate data (MVI)
-MVI_B   = 0x06
-MVI_C   = 0x0e
-MVI_D   = 0x16
-MVI_E   = 0x1e
-MVI_H   = 0x26
-MVI_L   = 0x2e
-MVI_M   = 0x36
-MVI_A   = 0x3e
+    #   move immediate data (MVI)
+    MVI_B   = 0x06
+    MVI_C   = 0x0e
+    MVI_D   = 0x16
+    MVI_E   = 0x1e
+    MVI_H   = 0x26
+    MVI_L   = 0x2e
+    MVI_M   = 0x36
+    MVI_A   = 0x3e
 
-#   load register pair immediate (LXI)
-LXI_B   = 0x01
-LXI_D   = 0x11
-LXI_H   = 0x21
-LXI_SP  = 0x31
+    #   load register pair immediate (LXI)
+    LXI_B   = 0x01
+    LXI_D   = 0x11
+    LXI_H   = 0x21
+    LXI_SP  = 0x31
 
-#   load accumulator direct
-LDA     = 0x3a
+    #   load accumulator direct
+    LDA     = 0x3a
 
-#   store acc direct
-STA     = 0x32
+    #   store acc direct
+    STA     = 0x32
 
-#   load H and L direct
-LHLD    = 0x2a
+    #   load H and L direct
+    LHLD    = 0x2a
 
-#   store H and L direct
-SHLD    = 0x22
+    #   store H and L direct
+    SHLD    = 0x22
 
-#   Load accumulator
-LDAX_B  = 0x0a
-LDAX_D  = 0x1a
+    #   Load accumulator
+    LDAX_B  = 0x0a
+    LDAX_D  = 0x1a
 
-#   Store accumulator
-STAX_B  = 0x02
-STAX_D  = 0x12
+    #   Store accumulator
+    STAX_B  = 0x02
+    STAX_D  = 0x12
 
-#   exchange registers
-XCHG    = 0xeb
+    #   exchange registers
+    XCHG    = 0xeb
 
-#   add register/memory to accumulator
-ADD_B   = 0x80
-ADD_C   = 0x81
-ADD_D   = 0x82
-ADD_E   = 0x83
-ADD_H   = 0x84
-ADD_L   = 0x85
-ADD_M   = 0x86
-ADD_A   = 0x87
+    #   add register/memory to accumulator
+    ADD_B   = 0x80
+    ADD_C   = 0x81
+    ADD_D   = 0x82
+    ADD_E   = 0x83
+    ADD_H   = 0x84
+    ADD_L   = 0x85
+    ADD_M   = 0x86
+    ADD_A   = 0x87
 
-#   add immediate to acc with/without carry
-ACI = 0xce
-ADI = 0xc6
+    #   add immediate to acc with/without carry
+    ACI = 0xce
+    ADI = 0xc6
 
-#   add register or memory to acc with carry
-ADC_B = 0x88
-ADC_C = 0x89
-ADC_D = 0x8a
-ADC_E = 0x8b
-ADC_H = 0x8c
-ADC_L = 0x8d
-ADC_M = 0x8e
-ADC_A = 0x8f
+    #   add register or memory to acc with carry
+    ADC_B = 0x88
+    ADC_C = 0x89
+    ADC_D = 0x8a
+    ADC_E = 0x8b
+    ADC_H = 0x8c
+    ADC_L = 0x8d
+    ADC_M = 0x8e
+    ADC_A = 0x8f
 
-# subtract memory or register from acc
-SUB_B = 0x90
-SUB_C = 0x91
-SUB_D = 0x92
-SUB_E = 0x93
-SUB_H = 0x94
-SUB_L = 0x95
-SUB_M = 0x96
-SUB_A = 0x97
+    # subtract memory or register from acc
+    SUB_B = 0x90
+    SUB_C = 0x91
+    SUB_D = 0x92
+    SUB_E = 0x93
+    SUB_H = 0x94
+    SUB_L = 0x95
+    SUB_M = 0x96
+    SUB_A = 0x97
 
-# subtract with borrow
-SBB_B = 0x98
-SBB_C = 0x99
-SBB_D = 0x9a
-SBB_E = 0x9b
-SBB_H = 0x9c
-SBB_L = 0x9d
-SBB_M = 0x9e
-SBB_A = 0x9f
+    # subtract with borrow
+    SBB_B = 0x98
+    SBB_C = 0x99
+    SBB_D = 0x9a
+    SBB_E = 0x9b
+    SBB_H = 0x9c
+    SBB_L = 0x9d
+    SBB_M = 0x9e
+    SBB_A = 0x9f
 
-# subtract immediate with/without borrow
-SBI   = 0xde
-SUI   = 0xd6
+    # subtract immediate with/without borrow
+    SBI   = 0xde
+    SUI   = 0xd6
 
-# increment register or memory
-INR_B = 0x04
-INR_C = 0x0c
-INR_D = 0x14
-INR_E = 0x1c
-INR_H = 0x24
-INR_L = 0x2c
-INR_M = 0x34
-INR_A = 0x3c
+    # increment register or memory
+    INR_B = 0x04
+    INR_C = 0x0c
+    INR_D = 0x14
+    INR_E = 0x1c
+    INR_H = 0x24
+    INR_L = 0x2c
+    INR_M = 0x34
+    INR_A = 0x3c
 
-# decrement
-DCR_B = 0x05
-DCR_C = 0x0d
-DCR_D = 0x15
-DCR_E = 0x1d
-DCR_H = 0x25
-DCR_L = 0x2d
-DCR_M = 0x35
-DCR_A = 0x3d
+    # decrement
+    DCR_B = 0x05
+    DCR_C = 0x0d
+    DCR_D = 0x15
+    DCR_E = 0x1d
+    DCR_H = 0x25
+    DCR_L = 0x2d
+    DCR_M = 0x35
+    DCR_A = 0x3d
 
-# increment register pairs
-INX_B = 0x03
-INX_D = 0x13
-INX_H = 0x23
-INX_SP = 0x33
+    # increment register pairs
+    INX_B = 0x03
+    INX_D = 0x13
+    INX_H = 0x23
+    INX_SP = 0x33
 
-# decrement register pairs
-DCX_B = 0x0b
-DCX_D = 0x1b
-DCX_H = 0x2b
-DCX_SP = 0x3b
+    # decrement register pairs
+    DCX_B = 0x0b
+    DCX_D = 0x1b
+    DCX_H = 0x2b
+    DCX_SP = 0x3b
 
-# double precision add
-DAD_B  = 0x09
-DAD_D  = 0x19
-DAD_H  = 0x29
-DAD_SP = 0x39
+    # double precision add
+    DAD_B  = 0x09
+    DAD_D  = 0x19
+    DAD_H  = 0x29
+    DAD_SP = 0x39
 
-# bcd adjust
-DAA = 0x27
+    # bcd adjust
+    DAA = 0x27
 
-# logical AND
-ANA_B = 0xa0
-ANA_C = 0xa1
-ANA_D = 0xa2
-ANA_E = 0xa3
-ANA_H = 0xa4
-ANA_L = 0xa5
-ANA_M = 0xa6
-ANA_A = 0xa7
+    # logical AND
+    ANA_B = 0xa0
+    ANA_C = 0xa1
+    ANA_D = 0xa2
+    ANA_E = 0xa3
+    ANA_H = 0xa4
+    ANA_L = 0xa5
+    ANA_M = 0xa6
+    ANA_A = 0xa7
 
-# AND with data
-ANI   = 0xe6
+    # AND with data
+    ANI   = 0xe6
 
-#logical OR
-ORA_B = 0xb0
-ORA_C = 0xb1
-ORA_D = 0xb2
-ORA_E = 0xb3
-ORA_H = 0xb4
-ORA_L = 0xb5
-ORA_M = 0xb6
-ORA_A = 0xb7
+    #logical OR
+    ORA_B = 0xb0
+    ORA_C = 0xb1
+    ORA_D = 0xb2
+    ORA_E = 0xb3
+    ORA_H = 0xb4
+    ORA_L = 0xb5
+    ORA_M = 0xb6
+    ORA_A = 0xb7
 
-# OR with data
-ORI = 0xf6
+    # OR with data
+    ORI = 0xf6
 
-# XOR
-XRA_B = 0xa8
-XRA_C = 0xa9
-XRA_D = 0xaa
-XRA_E = 0xab
-XRA_H = 0xac
-XRA_L = 0xad
-XRA_M = 0xae
-XRA_A = 0xaf
+    # XOR
+    XRA_B = 0xa8
+    XRA_C = 0xa9
+    XRA_D = 0xaa
+    XRA_E = 0xab
+    XRA_H = 0xac
+    XRA_L = 0xad
+    XRA_M = 0xae
+    XRA_A = 0xaf
 
-# XOR with data
-XRI = 0xee
+    # XOR with data
+    XRI = 0xee
 
-# Compare
-CMP_B = 0xb8
-CMP_C = 0xb9
-CMP_D = 0xba
-CMP_E = 0xbb
-CMP_H = 0xbc
-CMP_L = 0xbd
-CMP_M = 0xbe
-CMP_A = 0xbf
+    # Compare
+    CMP_B = 0xb8
+    CMP_C = 0xb9
+    CMP_D = 0xba
+    CMP_E = 0xbb
+    CMP_H = 0xbc
+    CMP_L = 0xbd
+    CMP_M = 0xbe
+    CMP_A = 0xbf
 
-# Compare with data
-CPI = 0xfe
+    # Compare with data
+    CPI = 0xfe
 
-# rotate instructions
-RLC = 0x07
-RRC = 0x0f
-RAL = 0x17
-RAR = 0x1f
+    # rotate instructions
+    RLC = 0x07
+    RRC = 0x0f
+    RAL = 0x17
+    RAR = 0x1f
 
-# complement acc
-CMA = 0x2f
+    # complement acc
+    CMA = 0x2f
 
-# carry bit instructions
-CMC = 0x3f
-STC = 0x37
+    # carry bit instructions
+    CMC = 0x3f
+    STC = 0x37
 
-# jump instructions
-JMP = 0xc3
-JPO = 0xe2
-JPE = 0xea
-JP  = 0xf2
-JZ  = 0xca
-JNZ = 0xc2
-JNC = 0xd2
-JC  = 0xda
-JM  = 0xfa
+    # jump instructions
+    JMP = 0xc3
+    JPO = 0xe2
+    JPE = 0xea
+    JP  = 0xf2
+    JZ  = 0xca
+    JNZ = 0xc2
+    JNC = 0xd2
+    JC  = 0xda
+    JM  = 0xfa
 
-PCHL = 0xe9
+    PCHL = 0xe9
 
-# call instructions
-CALL  = 0xcd
-CALL2 = 0xdd
-CALL3 = 0xed
-CALL4 = 0xfd
+    # call instructions
+    CALL  = 0xcd
+    CALL2 = 0xdd
+    CALL3 = 0xed
+    CALL4 = 0xfd
 
-CM  = 0xfc
-CPE = 0xec
-CC  = 0xdc
-CZ  = 0xcc
-CP  = 0xf4
-CPO = 0xe4
-CNC = 0xd4
-CNZ = 0xc4
+    CM  = 0xfc
+    CPE = 0xec
+    CC  = 0xdc
+    CZ  = 0xcc
+    CP  = 0xf4
+    CPO = 0xe4
+    CNC = 0xd4
+    CNZ = 0xc4
 
-# return instructions
-RET  = 0xc9
-RET2 = 0xd9
-RNZ  = 0xc0
-RZ   = 0xc8
-RNC  = 0xd0
-RC   = 0xd8
-RPO  = 0xe0
-RPE  = 0xe8
-RP   = 0xf0
-RM   = 0xf8
+    # return instructions
+    RET  = 0xc9
+    RET2 = 0xd9
+    RNZ  = 0xc0
+    RZ   = 0xc8
+    RNC  = 0xd0
+    RC   = 0xd8
+    RPO  = 0xe0
+    RPE  = 0xe8
+    RP   = 0xf0
+    RM   = 0xf8
 
-# restart
-RST_0 = 0xc7
-RST_1 = 0xcf
-RST_2 = 0xd7
-RST_3 = 0xdf
-RST_4 = 0xe7
-RST_5 = 0xef
-RST_6 = 0xf7
-RST_7 = 0xff
+    # restart
+    RST_0 = 0xc7
+    RST_1 = 0xcf
+    RST_2 = 0xd7
+    RST_3 = 0xdf
+    RST_4 = 0xe7
+    RST_5 = 0xef
+    RST_6 = 0xf7
+    RST_7 = 0xff
 
-# push pop
-PUSH_B  = 0xc5
-PUSH_D  = 0xd5
-PUSH_H  = 0xe5
-PUSH_PSW = 0xf
-POP_B   = 0xc1
-POP_D   = 0xd1
-POP_H   = 0xe1
-POP_PSW = 0xf1
+    # push pop
+    PUSH_B  = 0xc5
+    PUSH_D  = 0xd5
+    PUSH_H  = 0xe5
+    PUSH_PSW = 0xf5
+    POP_B   = 0xc1
+    POP_D   = 0xd1
+    POP_H   = 0xe1
+    POP_PSW = 0xf1
+
+    # stack exchange
+    XTHL = 0xe3
+    SPHL = 0xf9
+
+    # interrupts
+    EI  = 0xfb
+    DI  = 0xf3
+
+    # input output
+    OUT = 0xd3
+    IN  = 0xdb
+    

@@ -1,4 +1,5 @@
 from State import State
+from Bus import Bus
 from utils import bits_to_int, byte_to_bits
 
 register_codes = {
@@ -20,11 +21,11 @@ register_codes_16b = {
 
 class CPU():
 
-    def __init__(self, state:State, switches=None, display=None, config={}):
+    def __init__(self, state:State, bus:Bus, display=None, config={}):
         self.config = {'debug':False}
         self.config |= config # in-place update
         self.state = state
-        self.switches = switches
+        self.bus = bus
         self.display = display
     
 
@@ -64,8 +65,8 @@ class CPU():
             case [ 0, 0, 0, 0, 0, 0, 0, 0]: # instr_string = "NOP"
                 return 4
             case [ 0, 1, 1, 1, 0, 1, 1, 0]: # instr_string = "HLT"
-                # TODO Halt flag
-                return 7
+                # TODO Halt flag?
+                return None
             
             # Data transfer group
             case [ 0, 0, 1, 1, 1, 0, 1, 0]: # instr_string = "LDA"
@@ -306,10 +307,43 @@ class CPU():
                 return 5
             
             # push pop
+            case [ 1, 1, 1, 1, 0, 1, 0, 1]: # instr_string = "PUSH psw"
+                self._pushpsw()
+                return 11
             case [ 1, 1, r, p, 0, 1, 0, 1]: # instr_string = "PUSH rp"
                 register = self._get_r_from_bits([r,p])
                 self._push(register)
                 return 11
+            case [ 1, 1, 1, 1, 0, 0, 0, 1]: # instr_string = "POP psw"
+                self._poppsw()
+                return 10
+            case [ 1, 1, r, p, 0, 0, 0, 1]: # instr_string = "POP rp"
+                register = self._get_r_from_bits([r,p])
+                self._pop(register)
+                return 10
+            case [ 1, 1, 1, 0, 0, 0, 1, 1]: # instr_string = "XTHL"
+                self._xthl()
+                return 18
+            case [ 1, 1, 1, 1, 1, 0, 0, 1]: # instr_string = "XTHL"
+                hl = self.state.get_reg('hl')
+                self.state.set_sp(hl)
+                return 5
+            
+            # interrupts and I/O
+            case [ 1, 1, 1, 1, 1, 0, 1, 1]: # instr_string = "EI"
+                # TODO what do we do here
+                return 4
+            case [ 1, 1, 1, 1, 0, 0, 1, 1]: # instr_string = "DI"
+                # TODO what do we do here
+                return 4
+            case [ 1, 1, 0, 1, 1, 0, 1, 1]: # instr_string = "IN"
+                # TODO what do we do here
+                port = self._fetch_next_byte()
+                return 10
+            case [ 1, 1, 0, 1, 0, 0, 1, 1]: # instr_string = "OUT"
+                # TODO what do we do here
+                port = self._fetch_next_byte()
+                return 10
 
             case _:
                 raise NotImplementedError()
@@ -346,7 +380,7 @@ class CPU():
         self.state.set_flags({
             'a': ((source & 0xf) + (acc_value & 0xf) > 0xf), # ac
             'c': ((-source > acc_value) if use_negative else 
-             (source + acc_value >= 0xff)) # c
+             ((source + acc_value) > 0xff)) # c
         })
 
     def _inc(self, register=None, use_hl_address=False, negative=False):
@@ -377,8 +411,10 @@ class CPU():
         self.state.set_flag('c', result > 0xffff)
 
     def _daa(self):
+        saved_carry = self.state.get_flag('c') # save carry value in case of overwrite
         if ((self.state.get_reg('a') & 0xf) > 9) or self.state.get_flag('a'):
             self._add(6)
+            self.state.set_flag('c', saved_carry)
         saved_aux_carry = self.state.get_flag('a') # save aux carry value in case of overwrite
         if ((self.state.get_reg('a') >> 4) > 9) or self.state.get_flag('c'):
             self._add(6 << 4)
@@ -490,8 +526,11 @@ class CPU():
         value = self.state.get_reg(register)
         self._push_to_stack(value)
     
-    def _pop(self):
-        pass
+    def _pop(self, register):
+        if register == 'sp':
+            raise ValueError("SP may not be pushed in PUSH operation.")
+        value = self._pop_from_stack()
+        self.state.set_reg(register, value)
 
     def _pushpsw(self):
         psw = self.state.get_psw()
@@ -505,10 +544,12 @@ class CPU():
         self.state.set_reg('a', a)
         self.state.set_psw(psw)
 
-
+    def _xthl(self):
+        hl = self.state.get_reg('hl')
+        stack = self._pop_from_stack()
+        self._push_to_stack(hl)
+        self.state.set_reg('hl', stack)
         
-        
-
 
     def run_cycle(self):
         # 1. Fetch instruction opcode, advance PC
@@ -519,5 +560,7 @@ class CPU():
             used_cycles = self._run(instruction_bits)
         except NotImplementedError:
             raise NotImplementedError(f"Instruction not implemented: {op:X}")
-        print(self.state)
-        print(instruction_bits)
+        # print(self.state)
+        # print(f'Instruction: {instruction_bits}')
+        return used_cycles
+

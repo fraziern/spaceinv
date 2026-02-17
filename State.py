@@ -25,9 +25,9 @@ class State():
     MEMORY_SIZE = 16384
 
 
-    def __init__(self):
+    def __init__(self, romstart=None):
         self.registers = bytearray(7)
-        self.pc = self.ROMSTART
+        self.pc = self.ROMSTART if romstart is None else romstart
         self.ram = bytearray(self.MEMORY_SIZE)
         self.sp = self.STACKSTART
         self.flags = [0,0,0,0,0,0,1,0]
@@ -107,10 +107,26 @@ class State():
         return self.get_ram(self.pc)
     
 
-    def get_ram(self, address_or_reg):
+    def get_ram(self, address_or_reg, end_address=None):
         address = self.get_reg(address_or_reg) if isinstance(address_or_reg, 
                                                              str) else address_or_reg
-        return self.ram[address]
+        if end_address:
+            return self.ram[address:end_address]
+        else:
+            return self.ram[address]
 
-    def set_ram(self, address, value):
-        self.ram[address] = value % 256
+    def set_ram(self, address, data):
+        if address > self.MEMORY_SIZE:
+            raise IndexError("Out of memory range.")
+        if type(data) == int:
+            data = data.to_bytes(1)
+        elif type(data) == list:
+            data = bytes(data)
+        if type(data) != bytearray and type(data) != bytes:
+            raise ValueError(f"Attempting to set RAM with wrong data type: {type(data)}")
+        self.ram[address:address+len(data)] = data
+
+    def find(self, value, start_address=0):
+        # return the location of a value in ram
+        # used for testing
+        return self.ram.find(value, start_address)
