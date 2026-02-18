@@ -21,12 +21,11 @@ register_codes_16b = {
 
 class CPU():
 
-    def __init__(self, state:State, bus:Bus, display=None, config={}):
+    def __init__(self, state:State, bus:Bus, config={}):
         self.config = {'debug':False}
         self.config |= config # in-place update
         self.state = state
         self.bus = bus
-        self.display = display
     
 
     def _get_r_from_bits(self, bits):
@@ -52,12 +51,14 @@ class CPU():
         value = lsb | msb
         return value
 
+
     def _set_nc_flags(self, byte_result): # set non-carry flags
         self.state.set_flags({
             's': bool(byte_result >> 7), # s
             'z': bool(not byte_result),  # z
             'p': not bool(sum(byte_to_bits(byte_result)) % 2), # p
         })
+
 
     def _run(self, instruction:list):
         match instruction:
@@ -337,12 +338,12 @@ class CPU():
                 # TODO what do we do here
                 return 4
             case [ 1, 1, 0, 1, 1, 0, 1, 1]: # instr_string = "IN"
-                # TODO what do we do here
                 port = self._fetch_next_byte()
+                self.state.set_reg('a', self.bus.read(port))
                 return 10
             case [ 1, 1, 0, 1, 0, 0, 1, 1]: # instr_string = "OUT"
-                # TODO what do we do here
                 port = self._fetch_next_byte()
+                self.bus.write(port, self.state.get_reg('a'))
                 return 10
 
             case _:
@@ -361,6 +362,7 @@ class CPU():
                 self.state.set_reg(dest, source)
         else:
             self.state.set_ram(dest, source)
+
 
     def _add(self, source, add_carry=False, use_negative=False):
         acc_value = self.state.get_reg('a')
@@ -383,6 +385,7 @@ class CPU():
              ((source + acc_value) > 0xff)) # c
         })
 
+
     def _inc(self, register=None, use_hl_address=False, negative=False):
         inc_by = -1 if negative else 1
         if register:
@@ -397,11 +400,14 @@ class CPU():
         self._set_nc_flags(byte_result)
         self.state.set_flag('a',((initial_value & 0xf) + inc_by > 0xf))
 
+
     def _sub(self, source, sub_carry=False):
         self._add(source, add_carry=sub_carry, use_negative=True)
 
+
     def _dec(self, register=None, use_hl_address=False):
         self._inc(register, use_hl_address, negative=True)
+
 
     def _dad(self, register):
         # add register pair to hl, set carry flag if needed
@@ -409,6 +415,7 @@ class CPU():
         result = self.state.get_reg(register) + hl_value
         self.state.set_reg('hl', result & 0xffff)
         self.state.set_flag('c', result > 0xffff)
+
 
     def _daa(self):
         saved_carry = self.state.get_flag('c') # save carry value in case of overwrite
@@ -419,6 +426,7 @@ class CPU():
         if ((self.state.get_reg('a') >> 4) > 9) or self.state.get_flag('c'):
             self._add(6 << 4)
             self.state.set_flag('a', saved_aux_carry)
+
 
     def _logic(self, register_or_data, operation):
         if isinstance(register_or_data, str):  # register
@@ -439,31 +447,38 @@ class CPU():
         self.state.set_flag('c', False)  
         self.state.set_flag('a', False)
 
+
     def _ana(self, register_or_data):
         self._logic(register_or_data, 'and')
-    
+
+
     def _xra(self, register_or_data):
         self._logic(register_or_data, 'xor')
-    
+
+
     def _ora(self, register_or_data):
         self._logic(register_or_data, 'or')
+
 
     def _cmp(self, register_or_data):
         saved_acc_value = self.state.get_reg('a')
         self._sub(register_or_data)
         self.state.set_reg('a', saved_acc_value)
 
+
     def _rlc(self):
         acc_value = self.state.get_reg('a')
         high_bit = acc_value >> 7
         self.state.set_reg('a', (acc_value << 1) | high_bit)
         self.state.set_flag('c', high_bit)
-    
+
+
     def _rrc(self):
         acc_value = self.state.get_reg('a')
         low_bit = acc_value & 0x01
         self.state.set_reg('a', (acc_value >> 1) | (low_bit << 7))
         self.state.set_flag('c', low_bit)
+
 
     def _ral(self):
         acc_value = self.state.get_reg('a')
@@ -471,13 +486,15 @@ class CPU():
         high_bit = acc_value >> 7
         self.state.set_reg('a', (acc_value << 1) | carry)
         self.state.set_flag('c', high_bit)
-    
+
+
     def _rar(self):
         acc_value = self.state.get_reg('a')
         carry = int(self.state.get_flag('c'))
         low_bit = bool(acc_value & 0x01)
         self.state.set_reg('a', (acc_value >> 1) | (carry << 7))
         self.state.set_flag('c', low_bit)
+
 
     def _check_conditions(self, operation:int) -> bool:
         match operation:
@@ -498,51 +515,60 @@ class CPU():
             case 0b111:
                 return self.state.get_flag('s') == True
 
+
     def _push_to_stack(self, value):
         sp_start = self.state.get_sp()
         self.state.set_ram(sp_start - 1, value >> 8)
         self.state.set_ram(sp_start - 2, value & 0xff)
         self.state.set_sp(sp_start - 2)
-    
+
+
     def _pop_from_stack(self):
         sp_start = self.state.get_sp()
         sl = self.state.get_ram(sp_start)
         sh = self.state.get_ram(sp_start + 1)
         self.state.set_sp(sp_start + 2)
         return ((sh << 8) | sl)
-    
+
+
     def _call(self, address):
         pc = self.state.get_pc()
         self._push_to_stack(pc)
         self.state.set_pc(address)
 
+
     def _ret(self):
         value = self._pop_from_stack()
         self.state.set_pc(value)
+
 
     def _push(self, register):
         if register == 'sp':
             raise ValueError("SP may not be pushed in PUSH operation.")
         value = self.state.get_reg(register)
         self._push_to_stack(value)
-    
+
+
     def _pop(self, register):
         if register == 'sp':
             raise ValueError("SP may not be pushed in PUSH operation.")
         value = self._pop_from_stack()
         self.state.set_reg(register, value)
 
+
     def _pushpsw(self):
         psw = self.state.get_psw()
         a = self.state.get_reg('a')
         self._push_to_stack((a << 8) | psw)
-    
+
+
     def _poppsw(self):
         value = self._pop_from_stack()
         a = value >> 8
         psw = value & 0xff
         self.state.set_reg('a', a)
         self.state.set_psw(psw)
+
 
     def _xthl(self):
         hl = self.state.get_reg('hl')
@@ -560,7 +586,5 @@ class CPU():
             used_cycles = self._run(instruction_bits)
         except NotImplementedError:
             raise NotImplementedError(f"Instruction not implemented: {op:X}")
-        # print(self.state)
-        # print(f'Instruction: {instruction_bits}')
         return used_cycles
 
