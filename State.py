@@ -111,7 +111,7 @@ class State():
         address = self.get_reg(address_or_reg) if isinstance(address_or_reg, 
                                                              str) else address_or_reg
         if end_address:
-            return self.ram[address:end_address]
+            return self.ram[address:end_address].copy()
         else:
             return self.ram[address]
 
