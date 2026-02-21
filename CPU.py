@@ -90,6 +90,11 @@ class CPU():
                 return 16
             case [ 0, 1, 1, 1, 0,s1,s2,s3]: # instr_string = "MOV M,r"
                 self._mov(self._get_r_from_bits([s1,s2,s3]), 'hl', write_reg_address=True)
+                # ######## BREAK
+                # hl = self.state.get_reg('hl')
+                # if hl > 0x3fff:
+                #     return -7
+                # ######## BREAK END
                 return 7
             case [ 0, 1,d1,d2,d3, 1, 1, 0]: # instr_string = "MOV r,M"
                 data = self.state.get_ram('hl')
@@ -358,6 +363,7 @@ class CPU():
         if isinstance(dest, str):
             if write_reg_address:
                 self.state.set_ram(self.state.get_reg(dest), source)
+                # print(f"Writing to: {self.state.get_reg(dest)} at instr {self.state.pc:04x}")
             else:
                 self.state.set_reg(dest, source)
         else:
@@ -577,9 +583,13 @@ class CPU():
         self.state.set_reg('hl', stack)
         
 
-    def run_cycle(self):
+    def run_cycle(self, rst=None):
+        # interrupt
+        if rst:
+            op = rst
         # 1. Fetch instruction opcode, advance PC
-        op = self._fetch_next_byte()
+        else:
+            op = self._fetch_next_byte()
         # 2. Decode, into list of bits
         instruction_bits = byte_to_bits(op)
         try:

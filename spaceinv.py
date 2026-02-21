@@ -1,5 +1,6 @@
+import pickle
 import pygame
-from PygameDisplay import Display
+from NumpyDisplay import Display
 from State import State
 from Bus import Bus
 from CPU import CPU
@@ -8,9 +9,9 @@ from opcodebytes import Opcodebytes
 
 rom_filenames = [r'roms\invaders.h',r'roms\invaders.g',r'roms\invaders.f',r'roms\invaders.e']
 
-DEBUG = False
-FPS = 60 # Frames per second - do not change!
-CPF = int(2_000_000 / 60) # cycles per frame on a 2MHz 8080
+
+FPS = 60 # Frames per second
+CPF = 2_000_000 // FPS # cycles per frame on a 2MHz 8080
 ROMSTART = 0x0000
 
 # Create a value-to-name mapping - for debugging
@@ -18,13 +19,43 @@ ROMSTART = 0x0000
 opcode_names = {value: name for name, value in vars(Opcodebytes).items() if name.isupper()}
 
 
-def main():
+def wait_for_key(state):
+    print("Paused: (s) to save state (l) to load state (d) to debug")
+    waiting = True
+    while waiting:
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    waiting = False
+                elif event.key == pygame.K_s:
+                    # save state
+                    with open('state.pkl', 'wb') as file:
+                        pickle.dump(state, file)
+                    print("Saved state.")
+                elif event.key == pygame.K_l:
+                    with open('state.pkl', 'rb') as file:
+                        new_state = pickle.load(file)
+                        state.copy(new_state)
+                    print("Loaded state.")
+                elif event.key == pygame.K_d:
+                    print("Debug mode enabled.")
+                    return True # go into step mode
+    return False
 
+def print_debug_data(state):
+    curr_address = state.get_pc()
+    opcode = opcode_names[state.get_byte_at_pc()]
+    print(f"Completed instruction: {opcode}")
+    print(f"RAM slice: {state.get_ram(curr_address, curr_address+3).hex(' ')}")
+    print(state)
+    print()
+
+def main():
     pygame.init()
 
     state = State(romstart=ROMSTART)
     display = Display(state)
-    bus = Bus()
+    bus = Bus(state)
     cpu = CPU(state, bus)
 
 
@@ -41,43 +72,59 @@ def main():
 
     clock = pygame.time.Clock()
     running = True
+    step = False
+    print("Space to pause.")
 
-
-    ### MAIN LOOP
+    ### MAIN FRAME LOOP
     while(running):
+        screen_bottom = False  # for interrupts
+
         # 1. Event handling loop
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False # Set the flag to False to break the while loop
-    
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    step = wait_for_key(state)
+
         # 2. cpu frame
         current_cycles = 0
 
-        while (current_cycles < CPF):
-            curr_address = state.get_pc()
-            next_ram = state.get_ram(curr_address, curr_address+3)
-            next_instruction = state.get_byte_at_pc()
+        keys = pygame.key.get_pressed()
+        if (keys[pygame.K_d] and step) or not step:
+            while (current_cycles < CPF):
 
-            cycles = cpu.run_cycle()
-            if (cycles is None):
-                print("Halt code executed.")
-                quit()
-            else:
-                current_cycles += cycles
-            
-            if DEBUG:
-                opcode = opcode_names[next_instruction]
-                print(f"Instruction: {opcode}")
-                print(f"RAM slice: {next_ram.hex(' ')}")
-                print(state)
-                input("Enter to continue")
+                cycles = cpu.run_cycle()
+                if (cycles is None):
+                    print("Halt code executed.")
+                    quit()
+                elif cycles < 0:  # breakpoint
+                    step = True
+                    current_cycles -= cycles
+                else:
+                    current_cycles += cycles
+                
+                if step:
+                    print_debug_data(state)
 
-        # 3. Update display
+                # Interrupts here
+                # RST 1 opcode at middle of frame
+                if not screen_bottom and current_cycles >= (CPF // 2):
+                    current_cycles += cpu.run_cycle(0xcf)
+                    screen_bottom = True
+                # RST 2 opcode at end of frame
+                elif screen_bottom and current_cycles >= CPF:
+                    current_cycles += cpu.run_cycle(0xd7)
+                    screen_bottom = False
+
+
+        # 4. Update display
         display.render_screen()
 
-        # 4. sleep until FPS met
+        # 5. sleep until FPS met
         clock.tick(FPS)
         
+
 
 
 if __name__ == "__main__":

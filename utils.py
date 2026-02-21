@@ -1,3 +1,5 @@
+import numpy as np
+
 def bits_to_int(bits:list) -> int:
     # convert a list of 1s and 0s into an int
     binary_string = "".join(map(str, bits))
@@ -6,10 +8,6 @@ def bits_to_int(bits:list) -> int:
 
 def byte_to_bits(op):
     # Not exactly a "decode" but used to get bits in opcode
-    # Format the integer to a binary string, padding with leading zeros to ensure correct length
-    binary_string = format(op, f'08b')
-
-    # Convert the binary string to a list of integers (bits)
-    list_of_bits = [int(bit) for bit in binary_string]
-
+    op_np = np.array([op], dtype=np.uint8)
+    list_of_bits = np.unpackbits(op_np).tolist()
     return list_of_bits

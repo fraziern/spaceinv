@@ -32,14 +32,32 @@ class State():
         self.sp = self.STACKSTART
         self.flags = [0,0,0,0,0,0,1,0]
 
+        # bus data
+        self.writebus = [0] * 7
+        self.readbus = [0] * 4
+        self.shift_register = 0x0000 # 16 bit register
+
     def __str__(self):
         string = ""
         string += f'PC: {self.pc:4X}\n'
         string += f'Registers: ' + " ".join(
             [f'{reg}:{self.get_reg(reg):X} ' for reg in 'bcdehla']) + '\n'
         string += f'Flags: ' + " ".join(
-            [f'{flag}:{self.get_flag(flag)} ' for flag in 'szapc'])
+            [f'{flag}:{self.get_flag(flag)} ' for flag in 'szapc']) + "\n"
+        string += f'Shift register: {self.shift_register:4X}'
         return string
+
+    def copy(self, new_state):
+        self.registers = new_state.registers
+        self.pc = new_state.pc
+        self.ram = new_state.ram
+        self.sp = new_state.sp
+        self.flags = new_state.flags
+
+        # bus data
+        self.writebus = new_state.writebus
+        self.readbus = new_state.readbus
+        self.shift_register = new_state.shift_register
 
 
     def get_flag(self, flag:str) -> bool:
@@ -59,13 +77,12 @@ class State():
     def set_psw(self, psw:int):
         self.flags = byte_to_bits(psw)
 
-
     def set_reg(self, reg_code, value):
         if type(value) == bytes or type(value) == bytearray:
             value = int.from_bytes(value)
         if reg_code in reg_indices:
             register = reg_indices[reg_code]
-            self.registers[register] = value % 256
+            self.registers[register] = value & 0xff
         elif reg_code in ['bc','de','hl']:
             register1, register2 = (reg_indices[reg_code[0]], reg_indices[reg_code[1]])
             self.registers[register1] = (value >> 8) & 0xff
@@ -111,13 +128,14 @@ class State():
         address = self.get_reg(address_or_reg) if isinstance(address_or_reg, 
                                                              str) else address_or_reg
         if end_address:
-            return self.ram[address:end_address].copy()
+            return self.ram[address:end_address]
         else:
             return self.ram[address]
 
     def set_ram(self, address, data):
         if address > self.MEMORY_SIZE:
-            raise IndexError("Out of memory range.")
+            address = address - 0x2000 # RAM mirror
+            # raise IndexError(f"Out of memory range at instruction {self.pc}. Attempt to write to {address}")
         if type(data) == int:
             data = data.to_bytes(1)
         elif type(data) == list:
@@ -125,6 +143,24 @@ class State():
         if type(data) != bytearray and type(data) != bytes:
             raise ValueError(f"Attempting to set RAM with wrong data type: {type(data)}")
         self.ram[address:address+len(data)] = data
+
+    def set_writebus(self, port, value):
+        self.writebus[port] = value
+
+    def get_writebus(self, port):
+        return self.writebus[port]
+    
+    def set_readbus(self, port, value):
+        self.readbus[port] = value
+
+    def get_readbus(self, port):
+        return self.readbus[port]
+    
+    def set_shift_register(self, value):
+        self.shift_register = value
+
+    def get_shift_register(self):
+        return self.shift_register
 
     def find(self, value, start_address=0):
         # return the location of a value in ram
