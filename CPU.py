@@ -595,6 +595,6 @@ class CPU():
         try:
             used_cycles = self._run(instruction_bits)
         except NotImplementedError:
-            raise NotImplementedError(f"Instruction not implemented: {op:X}")
+            raise NotImplementedError(f"Instruction not implemented: {op:X} ({instruction_bits})")
         return used_cycles
 

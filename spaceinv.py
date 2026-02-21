@@ -4,6 +4,7 @@ from NumpyDisplay import Display
 from State import State
 from Bus import Bus
 from CPU import CPU
+from Keyboard import Keyboard
 from opcodebytes import Opcodebytes
 
 
@@ -57,6 +58,7 @@ def main():
     display = Display(state)
     bus = Bus(state)
     cpu = CPU(state, bus)
+    keyboard = Keyboard(bus)
 
 
     #####################################################
@@ -80,18 +82,25 @@ def main():
         screen_bottom = False  # for interrupts
 
         # 1. Event handling loop
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False # Set the flag to False to break the while loop
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
-                    step = wait_for_key(state)
+        # wait_for_input = True
+        # while (wait_for_input):
+        keyboard.get_state()
+        if (keyboard.request_quit):
+            running = False
+        elif keyboard.request_pause:
+            keyboard.clear_pause_request()
+            step = wait_for_key(state)
+
 
         # 2. cpu frame
         current_cycles = 0
 
-        keys = pygame.key.get_pressed()
-        if (keys[pygame.K_d] and step) or not step:
+        next_step = False
+        if step:
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_d]:
+                next_step = True
+        if (next_step and step) or not step:
             while (current_cycles < CPF):
 
                 cycles = cpu.run_cycle()
