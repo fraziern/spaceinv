@@ -53,6 +53,7 @@ class Keyboard():
 
     def get_state(self):
         # self.previous_state = self.current_state.copy()
+        update = False
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -61,10 +62,13 @@ class Keyboard():
                 self.request_pause = True
             elif event.type == pygame.KEYDOWN and event.key in self.keytable:
                 self.current_state[self.keytable[event.key]] = True
+                update = True
             elif event.type == pygame.KEYUP and event.key in self.keytable:
                 self.current_state[self.keytable[event.key]] = False
+                update = True
         
-        self._update_bus()
+        if update:
+            self._update_bus()
         
     
     def _update_bus(self):

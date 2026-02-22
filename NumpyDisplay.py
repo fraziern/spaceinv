@@ -16,7 +16,9 @@ class Display():
 
     # TODO cellophane
     WHITE = (255, 255, 255)
-    BLACK = (0, 0, 0)
+    BLACK = (20, 20, 20)
+    GREEN_CELLO = (20, 204, 96, 150)
+    RED_CELLO = (255, 31, 31, 150)
 
     def __init__(self, state: State):
         pygame.init()
@@ -32,9 +34,11 @@ class Display():
 
         # Create cellophane overlay
         self.overlay_surface = pygame.Surface((self.WIDTH, self.HEIGHT), pygame.SRCALPHA)
-        self.overlay_surface.fill((255,255,255))
-        draw_rect_alpha(self.overlay_surface, (20, 204, 96, 150), (0, 0, 20, 70))
-        draw_rect_alpha(self.overlay_surface, (20, 204, 96, 150), (20, 0, 20, 224))
+        self.overlay_surface.fill(self.WHITE)
+        draw_rect_alpha(self.overlay_surface, self.GREEN_CELLO, (0, 0, 20, 70))
+        draw_rect_alpha(self.overlay_surface, self.GREEN_CELLO, (20, 0, 20, 224))
+        draw_rect_alpha(self.overlay_surface, self.RED_CELLO, (200, 0, 20, 224))
+
 
 
     def _apply_glow(self, screen):

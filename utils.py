@@ -8,7 +8,9 @@ def bits_to_int(bits:list) -> int:
     return decimal_number
 
 def byte_to_bits(op:int) -> list[int]:
-    return [(op >> shift) & 1 for shift in range(7, -1, -1)]
+    # return_value = [(op >> shift) & 1 for shift in range(7, -1, -1)]
+    return_value = bitlist_lookup[op][:]
+    return return_value
 
 bitlist_lookup = {
     0: [0, 0, 0, 0, 0, 0, 0, 0],

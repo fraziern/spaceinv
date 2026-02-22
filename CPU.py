@@ -1,6 +1,7 @@
 from State import State
 from Bus import Bus
 from utils import bits_to_int, byte_to_bits
+import time
 
 register_codes = {
     0b111: 'a',
