@@ -1,5 +1,6 @@
 import pytest
 from Bus import Bus
+from State import State
 
 def test_shift_write(bus):
     bus.write(4, 0xaa)
@@ -21,6 +22,15 @@ def test_shift_read_offset(bus):
     bus.write(2, 0)
     assert bus.read(3) == 0xff
 
+def test_decode_sound_signal(bus):
+    bits = bus._decode_sound_signal(3, 0b00001010)
+    assert (3,1) in bits
+    assert (3,3) in bits
+
 @pytest.fixture
-def bus():
-    return Bus()
+def state():
+    return State()
+
+@pytest.fixture
+def bus(state):
+    return Bus(state)

@@ -6,6 +6,7 @@ from Bus import Bus
 from CPU import CPU
 from Keyboard import Keyboard
 from opcodebytes import Opcodebytes
+from Soundboard import Soundboard
 
 
 rom_filenames = [r'roms\invaders.h',r'roms\invaders.g',r'roms\invaders.f',r'roms\invaders.e']
@@ -14,6 +15,7 @@ rom_filenames = [r'roms\invaders.h',r'roms\invaders.g',r'roms\invaders.f',r'roms
 FPS = 60 # Frames per second
 CPF = 2_000_000 // FPS # cycles per frame on a 2MHz 8080
 ROMSTART = 0x0000
+show_fps = True
 
 # Create a value-to-name mapping - for debugging
 # vars(MyClass) returns a dictionary of class attributes
@@ -56,7 +58,8 @@ def main():
 
     state = State(romstart=ROMSTART)
     display = Display(state)
-    bus = Bus(state)
+    soundboard = Soundboard()
+    bus = Bus(state, soundboard)
     cpu = CPU(state, bus)
     keyboard = Keyboard(bus)
 
@@ -128,6 +131,8 @@ def main():
 
 
         # 4. Update display
+        if show_fps:
+            display.add_fps(clock.get_fps())
         display.render_screen()
 
         # 5. sleep until FPS met

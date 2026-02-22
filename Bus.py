@@ -1,14 +1,31 @@
 from State import State
+from Soundboard import Soundboard
 
 class Bus():
 
-    def __init__(self, state:State):
+    SOUNDBOARD_WIRING = {
+        # (port, bit): sound index
+        (3, 0): 0,
+        (3, 1): 1,
+        (3, 2): 2,
+        (3, 3): 3,
+        (5, 0): 4,
+        (5, 1): 5,
+        (5, 2): 6,
+        (5, 3): 7,
+        (5, 4): 8,
+    }
+
+    def __init__(self, state:State, soundboard:Soundboard=None):
         self.state = state
+        self.soundboard = soundboard
     
     def write(self, port:int, value:int):
         if not isinstance(value, int):
             raise TypeError("Bus value must be int.")
         self.state.set_writebus(port, value % 256)
+        if port in [3, 5]: # discrete sounds
+            self._sound_signal(port, value)
         if port == 4:  # run bit shift
             self._shift()
     
@@ -36,6 +53,23 @@ class Bus():
         newvalue |= (self.state.get_writebus(4) << 8)
         self.state.set_shift_register(newvalue % 65_535) # 16 bit
 
+    def _decode_sound_signal(self, port, value):
+        # build a list of "on" bits
+        set_bits = []
+        for offset in range(5): # only first 5 bits could have sound signals
+            trigger = (1 << offset) & value
+            if trigger:
+                set_bits.append((port, offset))
+        return set_bits
+
+    def _sound_signal(self, port, value):
+        set_pins = self._decode_sound_signal(port, value)
+        for pin in set_pins: # pin is (port, bit)
+            sound_index = self.SOUNDBOARD_WIRING[pin]
+            self.soundboard.play(sound_index)
+
+
+                
 
 
 

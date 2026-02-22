@@ -14,14 +14,17 @@ class Display():
     WIDTH = 256
     HEIGHT = 224
 
-    # TODO cellophane
     WHITE = (255, 255, 255)
     BLACK = (20, 20, 20)
     GREEN_CELLO = (20, 204, 96, 150)
     RED_CELLO = (255, 31, 31, 150)
 
+
     def __init__(self, state: State):
         pygame.init()
+
+        self.fps = None
+        self.font = pygame.font.SysFont("Verdana", 10) # Use a valid system font
 
         self.state = state
         self.window = pygame.display.set_mode((self.HEIGHT*2, self.WIDTH*3))
@@ -40,17 +43,12 @@ class Display():
         draw_rect_alpha(self.overlay_surface, self.RED_CELLO, (200, 0, 20, 224))
 
 
-
-    def _apply_glow(self, screen):
-        width, height = screen.get_size()
-        glow_surf = pygame.transform.smoothscale(screen, (width // 2, height // 2))
-        glow_surf = pygame.transform.smoothscale(glow_surf, (width, height))
-        glow_surf.set_alpha(100)
-        screen.blit(glow_surf, (0, 0))
-
     def clear_screen(self):
         self.window.fill(self.BLACK)
         pygame.display.flip()
+
+    def add_fps(self, fps):
+        self.fps = fps
 
 
     def render_screen(self):
@@ -70,6 +68,10 @@ class Display():
         self.pixel_surface.blit(self.overlay_surface, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
         rotated_surface = pygame.transform.rotate(self.pixel_surface, 90)
         scaled_surface = pygame.transform.scale(rotated_surface, (self.HEIGHT*2, self.WIDTH*3))
+
+        if self.fps:
+            fps_text_surface = self.font.render(f"FPS: {self.fps:.2f}", True, self.WHITE) # Format to 2 decimal places
+            scaled_surface.blit(fps_text_surface, (10, 10))
 
         glow_surf = pygame.transform.smoothscale(scaled_surface, (self.HEIGHT, self.WIDTH))
         glow_surf = pygame.transform.smoothscale(glow_surf, (self.HEIGHT*2, self.WIDTH*3))
